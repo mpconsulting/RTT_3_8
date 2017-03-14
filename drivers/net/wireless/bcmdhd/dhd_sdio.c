@@ -203,6 +203,7 @@ typedef struct dhd_console {
 #define OVERFLOW_BLKSZ512_MES		80
 
 #define CC_PMUCC3	(0x3)
+#define MURATA_WORKAROUND_FOR_HTAVAIL
 /* Private data for SDIO bus interaction */
 typedef struct dhd_bus {
 	dhd_pub_t	*dhd;
@@ -1136,6 +1137,9 @@ dhdsdio_htclk(dhd_bus_t *bus, bool on, bool pendok)
 	uint8 clkctl, clkreq, devctl;
 	bcmsdh_info_t *sdh;
 	uint32 delay = PMU_MAX_TRANSITION_DLY;
+#ifdef MURATA_WORKAROUND_FOR_HTAVAIL
+	int try_count, try_err;
+#endif
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
@@ -1217,6 +1221,10 @@ dhdsdio_htclk(dhd_bus_t *bus, bool on, bool pendok)
 		if (bus->sih->chip == BCM43362_CHIP_ID) {
 			delay += PMU_TRANSITION_DLY_EXTRA;
 		}
+#ifdef MURATA_WORKAROUND_FOR_HTAVAIL
+                for (try_count = 0; try_count < 20; try_count++) { /* loop 20 times to test condition */
+                                try_err = 0;
+#endif /* MURATA_WORKAROUND_FOR_HTAVAIL */
 
 		/* Otherwise, wait here (polling) for HT Avail */
 		if (!SBSDIO_CLKAV(clkctl, bus->alp_only)) {
@@ -1228,14 +1236,34 @@ dhdsdio_htclk(dhd_bus_t *bus, bool on, bool pendok)
 		}
 		if (err) {
 			DHD_ERROR(("%s: HT Avail request error: %d\n", __FUNCTION__, err));
+#ifdef MURATA_WORKAROUND_FOR_HTAVAIL
+                                try_err = 1;
+#else
+                                return BCME_ERROR;
+#endif /* MURATA_WORKAROUND_FOR_HTAVAIL */
 			return BCME_ERROR;
 		}
 		if (!SBSDIO_CLKAV(clkctl, bus->alp_only)) {
 			DHD_ERROR(("%s: HT Avail timeout (%d): clkctl 0x%02x\n",
 			           __FUNCTION__, PMU_MAX_TRANSITION_DLY, clkctl));
-			return BCME_ERROR;
+#ifdef MURATA_WORKAROUND_FOR_HTAVAIL
+                	        try_err = 1;
+#else
+                        	return BCME_ERROR;
+#endif /* MURATA_WORKAROUND_FOR_HTAVAIL */
 		}
 
+#ifdef MURATA_WORKAROUND_FOR_HTAVAIL
+                        if (try_err == 0) {
+                        	break;
+                        }
+                } /* for (try_count = 0; try_count < 20; try_count++) */
+
+                if (try_err == 1) {
+                	DHD_ERROR(("%s: HT Avail request error: retried %d times. UNRECOVERABLE!\n", __FUNCTION__, try_count));
+                	return BCME_ERROR;
+                }
+#endif /* MURATA_WORKAROUND_FOR_HTAVAIL */
 		/* Mark clock available */
 		bus->clkstate = CLK_AVAIL;
 		DHD_INFO(("CLKCTL: turned ON\n"));
