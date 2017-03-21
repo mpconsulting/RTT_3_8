@@ -85,41 +85,15 @@
 		};
 	};
 
+	zl380-codec {
+ 		compatible = "ms,zl38040", "ms,zl38050", "ms,zl38060", "ms,zl38080";
+ 		status = "okay";
+ 	};
+
 	sound {
-		compatible = "fsl,imx6ul-evk-wm8960",
-			   "fsl,imx-audio-wm8960";
-		model = "wm8960-audio";
-		cpu-dai = <&sai2>;
-		audio-codec = <&codec>;
-		asrc-controller = <&asrc>;
-		codec-master;
-		gpr = <&gpr>;
-		/*
-                 * hp-det = <hp-det-pin hp-det-polarity>;
-		 * hp-det-pin: JD1 JD2  or JD3
-		 * hp-det-polarity = 0: hp detect high for headphone
-		 * hp-det-polarity = 1: hp detect high for speaker
-		 */
-		hp-det = <3 0>;
-		hp-det-gpios = <&gpio5 4 0>;
-		mic-det-gpios = <&gpio5 4 0>;
-		audio-routing =
-			"Headphone Jack", "HP_L",
-			"Headphone Jack", "HP_R",
-			"Ext Spk", "SPK_LP",
-			"Ext Spk", "SPK_LN",
-			"Ext Spk", "SPK_RP",
-			"Ext Spk", "SPK_RN",
-			"LINPUT2", "Mic Jack",
-			"LINPUT3", "Mic Jack",
-			"RINPUT1", "Main MIC",
-			"RINPUT2", "Main MIC",
-			"Mic Jack", "MICB",
-			"Main MIC", "MICB",
-			"CPU-Playback", "ASRC-Playback",
-			"Playback", "CPU-Playback",
-			"ASRC-Capture", "CPU-Capture",
-			"CPU-Capture", "Capture";
+			compatible = "microsemi,microsemi-dac";
+			i2s-controller = <&sai2>;
+
 	};
 
 	spi4 {
@@ -168,6 +142,7 @@
 	};
 };
 
+/*
 &fec1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet1>;
@@ -175,6 +150,7 @@
 	phy-handle = <&ethphy0>;
 	status = "okay";
 };
+
 
 &fec2 {
 	pinctrl-names = "default";
@@ -197,7 +173,7 @@
 			reg = <1>;
 		};
 	};
-};
+};*/
 
 &flexcan1 {
 	pinctrl-names = "default";
@@ -584,6 +560,22 @@
 				MX6UL_PAD_LCD_RESET__WDOG1_WDOG_ANY    0x30b0
 			>;
 		};
+
+
+ 		pinctrl_ecspi4_cs: ecspi4_cs_grp {
+ 			fsl,pins = <
+ 				MX6UL_PAD_ENET2_RX_ER__GPIO2_IO15	0x10b0
+ 			>;
+ 		};
+ 
+ 		pinctrl_ecspi4: ecspi4grp {
+ 			fsl,pins = <
+ 				MX6UL_PAD_ENET2_TX_EN__ECSPI4_MOSI		0x10b0
+				MX6UL_PAD_ENET2_TX_CLK__ECSPI4_MISO		0x10b0
+ 				MX6UL_PAD_ENET2_TX_DATA1__ECSPI4_SCLK	        0x10b0
+			>;
+
+ 		};
 	};
 };
 
@@ -745,3 +737,12 @@
 	pinctrl-0 = <&pinctrl_wdog>;
 	fsl,wdog_b;
 };
+
+
+&ecspi4 {
+ 	fsl,spi-num-chipselects = <1>;
+ 	cs-gpios = <&gpio2 15 0>;
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pinctrl_ecspi4 &pinctrl_ecspi4_cs>;
+ 	status = "okay";
+ };
