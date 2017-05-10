@@ -202,20 +202,23 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c1>;
 	status = "okay";
-
-	mag3110@0e {
-		compatible = "fsl,mag3110";
-		reg = <0x0e>;
-		position = <2>;
-	};
-
-	fxls8471@1e {
-		compatible = "fsl,fxls8471";
-		reg = <0x1e>;
+	
+	pmicbd71815@4b {
+		compatible = "rohm,pmic-bd71815";
+		reg = <0x4b>;
 		position = <0>;
-		interrupt-parent = <&gpio5>;
-		interrupts = <0 8>;
 	};
+
+/* For silego on the custom boards */
+
+        slg46537@08 {
+                compatible = "silego,slg46537";
+                reg = <0x08>;
+                position = <0>;
+                interrupt-parent = <&gpio4>;
+                interrupts = <20 2>;
+        }; 
+
 };
 
 &i2c2 {
@@ -223,6 +226,16 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
+
+/* For silego on dev board */
+/*
+	input: slg46537@08 {
+		compatible = "silego,slg46537";
+		reg = <0x08>;
+		position = <0>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <11 2>;
+	}; */
 
 	codec: wm8960@1a {
 		compatible = "wlf,wm8960";
@@ -260,22 +273,23 @@
 		pinctrl_hog_1: hoggrp-1 {
 			fsl,pins = <
 				MX6UL_PAD_UART1_RTS_B__GPIO1_IO19	0x17059 /* SD1 CD */
-				MX6UL_PAD_GPIO1_IO05__USDHC1_VSELECT	0x17059 /* SD1 VSELECT */
+			/*	MX6UL_PAD_GPIO1_IO05__USDHC1_VSELECT	0x17059 /* SD1 VSELECT */ /*Commented by VIDI */
 				MX6UL_PAD_GPIO1_IO09__GPIO1_IO09        0x17059 /* SD1 RESET */
 				MX6UL_PAD_SNVS_TAMPER0__GPIO5_IO00	0x80000000
+				
 			>;
 		};
 
 		pinctrl_csi1: csi1grp {
 			fsl,pins = <
-				MX6UL_PAD_CSI_MCLK__CSI_MCLK		0x1b088
-				MX6UL_PAD_CSI_PIXCLK__CSI_PIXCLK	0x1b088
+				/*MX6UL_PAD_CSI_MCLK__CSI_MCLK		0x1b088 */ /* Commented by vidi */
+				/*MX6UL_PAD_CSI_PIXCLK__CSI_PIXCLK	0x1b088 *//* Commented by vidi */
 				MX6UL_PAD_CSI_VSYNC__CSI_VSYNC		0x1b088
 				MX6UL_PAD_CSI_HSYNC__CSI_HSYNC		0x1b088
-				MX6UL_PAD_CSI_DATA00__CSI_DATA02	0x1b088
-				MX6UL_PAD_CSI_DATA01__CSI_DATA03	0x1b088
-				MX6UL_PAD_CSI_DATA02__CSI_DATA04	0x1b088
-				MX6UL_PAD_CSI_DATA03__CSI_DATA05	0x1b088
+			/*	MX6UL_PAD_CSI_DATA00__CSI_DATA02	0x1b088  */ /* commented by vidi */
+			/*	MX6UL_PAD_CSI_DATA01__CSI_DATA03	0x1b088 */ /* commented by VIDI */
+			/*	MX6UL_PAD_CSI_DATA02__CSI_DATA04	0x1b088 */ /* commented by VIDI */
+			/*	MX6UL_PAD_CSI_DATA03__CSI_DATA05	0x1b088 */ /* commented by vidi */
 				MX6UL_PAD_CSI_DATA04__CSI_DATA06	0x1b088
 				MX6UL_PAD_CSI_DATA05__CSI_DATA07	0x1b088
 				MX6UL_PAD_CSI_DATA06__CSI_DATA08	0x1b088
@@ -319,8 +333,8 @@
 
 		pinctrl_flexcan1: flexcan1grp{
 			fsl,pins = <
-				MX6UL_PAD_UART3_RTS_B__FLEXCAN1_RX	0x1b020
-				MX6UL_PAD_UART3_CTS_B__FLEXCAN1_TX	0x1b020
+			/*	MX6UL_PAD_UART3_RTS_B__FLEXCAN1_RX	0x1b020
+				MX6UL_PAD_UART3_CTS_B__FLEXCAN1_TX	0x1b020 */ /* commented by VIDI */
 			>;
 		};
 
@@ -335,6 +349,23 @@
 			fsl,pins = <
 				MX6UL_PAD_UART4_TX_DATA__I2C1_SCL 0x4001b8b0
 				MX6UL_PAD_UART4_RX_DATA__I2C1_SDA 0x4001b8b0
+				MX6UL_PAD_CSI_DATA01__GPIO4_IO22  0x10b0 /* VIDI TODO - To be moved later */ /* To configure as gpio output for LDO5VSEL of PMIC */
+				MX6UL_PAD_GPIO1_IO06__GPIO1_IO06  0x10b0
+				MX6UL_PAD_CSI_DATA02__GPIO4_IO23  0x10b0
+				MX6UL_PAD_CSI_DATA03__GPIO4_IO24  0x80000000
+				MX6UL_PAD_GPIO1_IO00__GPIO1_IO00  0x11F0
+				MX6UL_PAD_GPIO1_IO02__GPIO1_IO02  0x10b0
+				MX6UL_PAD_GPIO1_IO03__GPIO1_IO03  0x10b0
+				MX6UL_PAD_GPIO1_IO05__GPIO1_IO05  0x10b0
+				MX6UL_PAD_GPIO1_IO04__GPIO1_IO04  0x80000000
+				MX6UL_PAD_GPIO1_IO01__GPIO1_IO01  0x80000000
+				MX6UL_PAD_CSI_MCLK__GPIO4_IO17    0x10b0
+                                MX6UL_PAD_CSI_PIXCLK__GPIO4_IO18  0x10b0 
+				MX6UL_PAD_CSI_DATA00__GPIO4_IO21  0x10b0
+		/*		MX6UL_PAD_JTAG_TMS__GPIO1_IO11   0x10b0 */ /* For silego on dev board, on dev boards silego and microsemi r mutually exclusive */
+				MX6UL_PAD_CSI_HSYNC__GPIO4_IO20  0x80000000 /* For silego on custom boards */
+
+				
 			>;
 		};
 
@@ -342,6 +373,7 @@
 			fsl,pins = <
 				MX6UL_PAD_UART5_TX_DATA__I2C2_SCL 0x4001b8b0
 				MX6UL_PAD_UART5_RX_DATA__I2C2_SDA 0x4001b8b0
+			/*	MX6UL_PAD_JTAG_TMS__GPIO1_IO11    0x80000000 */
 			>;
 		};
 
@@ -415,12 +447,12 @@
 
 		pinctrl_sim2_1: sim2grp-1 {
 			fsl,pins = <
-				MX6UL_PAD_CSI_DATA03__SIM2_PORT1_PD		0xb808
+			/*	MX6UL_PAD_CSI_DATA03__SIM2_PORT1_PD		0xb808 */ /* Commented by VIDI */
 				MX6UL_PAD_CSI_DATA04__SIM2_PORT1_CLK		0x11
 				MX6UL_PAD_CSI_DATA05__SIM2_PORT1_RST_B		0xb810
 				MX6UL_PAD_CSI_DATA06__SIM2_PORT1_SVEN		0xb810
 				MX6UL_PAD_CSI_DATA07__SIM2_PORT1_TRXD		0xb811
-				MX6UL_PAD_CSI_DATA02__GPIO4_IO23		0x3008
+		/*		MX6UL_PAD_CSI_DATA02__GPIO4_IO23		0x3008 */ /* commented by VIDI*/
 			>;
 		};
 
@@ -435,10 +467,10 @@
 
 		pinctrl_tsc: tscgrp {
 			fsl,pins = <
-				MX6UL_PAD_GPIO1_IO01__GPIO1_IO01	0xb0
-				MX6UL_PAD_GPIO1_IO02__GPIO1_IO02	0xb0
-				MX6UL_PAD_GPIO1_IO03__GPIO1_IO03	0xb0
-				MX6UL_PAD_GPIO1_IO04__GPIO1_IO04	0xb0
+				/*MX6UL_PAD_GPIO1_IO01__GPIO1_IO01	0xb0 */
+				/*MX6UL_PAD_GPIO1_IO02__GPIO1_IO02	0xb0 */ /* Commented by VIDI */
+				/*MX6UL_PAD_GPIO1_IO03__GPIO1_IO03	0xb0 */ /* Commented by VIDI */
+				/*MX6UL_PAD_GPIO1_IO04__GPIO1_IO04	0xb0 */ /* Commented by VIDI */
 			>;
 		};
 
@@ -453,17 +485,25 @@
 			fsl,pins = <
 				MX6UL_PAD_UART2_TX_DATA__UART2_DCE_TX	0x1b0b1
 				MX6UL_PAD_UART2_RX_DATA__UART2_DCE_RX	0x1b0b1
-				MX6UL_PAD_UART3_RX_DATA__UART2_DCE_RTS	0x1b0b1
-				MX6UL_PAD_UART3_TX_DATA__UART2_DCE_CTS	0x1b0b1
+			/*	MX6UL_PAD_UART3_RX_DATA__UART2_DCE_RTS	0x1b0b1
+				MX6UL_PAD_UART3_TX_DATA__UART2_DCE_CTS	0x1b0b1 */ /* Commented by VIDI */
 			>;
 		};
+
+/* uart3 added by VIDI */
+                pinctrl_uart3: uart3grp {
+                        fsl,pins = <
+                                MX6UL_PAD_UART3_TX_DATA__UART3_DCE_TX 0x1b0b1
+                                MX6UL_PAD_UART3_RX_DATA__UART3_DCE_RX 0x1b0b1
+                        >;
+                };
 
 		pinctrl_uart2dte: uart2dtegrp {
 			fsl,pins = <
 				MX6UL_PAD_UART2_TX_DATA__UART2_DTE_RX	0x1b0b1
 				MX6UL_PAD_UART2_RX_DATA__UART2_DTE_TX	0x1b0b1
-				MX6UL_PAD_UART3_RX_DATA__UART2_DTE_CTS	0x1b0b1
-				MX6UL_PAD_UART3_TX_DATA__UART2_DTE_RTS	0x1b0b1
+			/*	MX6UL_PAD_UART3_RX_DATA__UART2_DTE_CTS	0x1b0b1
+				MX6UL_PAD_UART3_TX_DATA__UART2_DTE_RTS	0x1b0b1 */ /* Commented by VIDI */
 			>;
 		};
 
@@ -576,6 +616,12 @@
 			>;
 
  		};
+/*
+		pinctrl_rtt_silego: silegoio {
+			fsl,pins = <
+				MX6UL_PAD_JTAG_TMS__GPIO1_IO11           0x80000000
+			>;
+		};	 */	
 	};
 };
 
@@ -690,6 +736,13 @@
 	/* pinctrl-0 = <&pinctrl_uart2dte>; */
 	status = "okay";
 };
+
+&uart3 {
+        pinctrl-names = "default";
+        pinctrl-0 = <&pinctrl_uart3>;
+        status = "okay";
+};
+
 
 &usbotg1 {
 	dr_mode = "otg";
