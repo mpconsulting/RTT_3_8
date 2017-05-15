@@ -45,7 +45,9 @@
 #define PMIC_LDO4_VOLT_REG_VALUE 0x08 //For 3.2V
 #define PMIC_LDO5_VOLT_H_REG_ADDR 0x18
 #define PMIC_LDO5_VOLT_H_REG_VALUE 0x30
-
+#define PMIC_LDO_MODE1_REG_ADDR 0x10
+#define PMIC_LDO_MODE3_REG_ADDR 0x12
+#define PMIC_LDO_MODE3_REG_VALUE 0xFF
 
 
 struct pmic_data {
@@ -182,9 +184,30 @@ static int pmic_ldo_configure(struct pmic_data *pmic)
 		error = -EIO;
 		goto exit_ldo;
 	}
+	/* Set LDO4_reg_mode bit in LDO_MODE1 register */
+	recvbuf = 0;
+        error = pmic_i2c_read(pmic, PMIC_LDO_MODE1_REG_ADDR, &recvbuf, 1);
+	if (error != 2) {
+		dev_info(pmic->dev, "Error reading PMIC_LDO_MODE1_REG_ADDR = %d\n", error);
+		goto exit_ldo;
+	}
+
+	recvbuf = recvbuf & 0xF7; // clear bit 3
+	error = i2c_smbus_write_byte_data(pmic->client, PMIC_LDO_MODE1_REG_ADDR, recvbuf);
+	dev_info(pmic->dev, "Writing to LDO_MODE1 = 0x%x\n", recvbuf);
+        if (error){
+                dev_err(pmic->dev, "Error writing 0x%x to PMIC_LDO_MODE1_REG_ADDR = 0x%d\n", recvbuf, error);
+                goto exit_ldo;
+        }
+	//Read it back
+        recvbuf = 0;
+        pmic_i2c_read(pmic, PMIC_LDO_MODE1_REG_ADDR, &recvbuf, 1);
+	if (recvbuf & 0x08) {
+		dev_err(pmic->dev, "Register 0x%x read 0x%x, expected bit 3 to be cleared\n",
+				PMIC_LDO_MODE1_REG_ADDR, recvbuf);
+	}
         //Turn on LDO4
         gpio_set_value(PMIC_LDO4 , 1);
-
 
 	/* Configure LDO5 voltage */
         recvbuf = PMIC_LDO5_VOLT_H_REG_VALUE;
@@ -205,6 +228,27 @@ static int pmic_ldo_configure(struct pmic_data *pmic)
         }
 	//set LDO5VSEL to high
         gpio_set_value(PMIC_LDO5VSEL , 1);
+
+
+	//Turn on LDO4 and LDO5
+	//Write 0xFF to 0x12h
+        recvbuf = PMIC_LDO_MODE3_REG_VALUE;
+        error = i2c_smbus_write_byte_data(pmic->client, PMIC_LDO_MODE3_REG_ADDR, recvbuf);
+        if (error ) {
+                dev_err(pmic->dev, "Error writing to PMIC_LDO_MODE3_REG_ADDR = 0x%d", error);
+                goto exit_ldo;
+        }
+        //Read it back
+        recvbuf = 0;
+        pmic_i2c_read(pmic, PMIC_LDO_MODE3_REG_ADDR, &recvbuf, 1);
+        if ( recvbuf != PMIC_LDO_MODE3_REG_VALUE ) {
+                dev_info(pmic->dev, "Error: PMIC_LDO_MODE3_REG_ADDR value was expected \
+                               0x%x but read 0x%x", PMIC_LDO_MODE3_REG_VALUE, recvbuf);
+                error = -EIO;
+                goto exit_ldo;
+        }
+
+	dev_info(pmic->dev, "pmic ldo configured successfully\n");
 
 exit_ldo:
 	return error;	
@@ -252,6 +296,33 @@ static ssize_t pmic_set_sierra_enable(struct device *dev, struct device_attribut
 
 }
 
+
+
+static ssize_t pmic_set_gpiotest(struct device *dev, struct device_attribute *attr,
+                                                const char *buf, size_t count)
+{
+
+        struct i2c_client *client = to_i2c_client(dev);
+        struct pmic_data *pmic = i2c_get_clientdata(client);
+        int error;
+        unsigned int input;
+        char recvbuf;
+
+        error = kstrtouint(buf, 10, &input);
+        if (error < 0)
+                return error;
+
+	if(input == 0) {
+		dev_info(dev, "Making ldo5sel low \n");
+		gpio_set_value(PMIC_LDO5VSEL , 0);
+	}
+	if(input == 1) {
+		dev_info(dev, "Making ldo5sel high\n");
+		gpio_set_value(PMIC_LDO5VSEL , 1);
+	}
+
+	return count;
+}
 
 
 static ssize_t pmic_set_test(struct device *dev, struct device_attribute *attr,
@@ -323,6 +394,7 @@ static DEVICE_ATTR(test, S_IRUGO|S_IWUSR, NULL, pmic_set_test);
 static DEVICE_ATTR(i2ctest, S_IRUGO|S_IWUSR, NULL, pmic_set_i2ctest);
 static DEVICE_ATTR(pmic_configure, S_IRUGO|S_IWUSR, NULL, pmic_set_configure);
 static DEVICE_ATTR(sierra_enable, S_IRUGO|S_IWUSR, NULL, pmic_set_sierra_enable);
+static DEVICE_ATTR(gpiotest, S_IRUGO|S_IWUSR, NULL, pmic_set_gpiotest);
 
 
 static struct attribute *pmic_attributes[] = {
@@ -331,6 +403,7 @@ static struct attribute *pmic_attributes[] = {
 	&dev_attr_wlan_enable.attr,
 	&dev_attr_pmic_configure.attr,
 	&dev_attr_sierra_enable.attr,
+	&dev_attr_gpiotest,
 	NULL
 };
 
@@ -491,7 +564,7 @@ static int pmic_probe(struct i2c_client *client,
                         dev_err(&client->dev, "gpio_request for BT_REG_ON enable failed %d\n", err);
                         goto err_free_mem;
         }
-        err = gpio_direction_output(BT_REG_ON, 1);
+        err = gpio_direction_output(BT_REG_ON, 0);
         if (err) {
                         dev_err(&client->dev, "Failed to configure BT_REG_ON enable as output %d\n", err);
                         goto err_free_mem;
@@ -502,7 +575,7 @@ static int pmic_probe(struct i2c_client *client,
                         dev_err(&client->dev, "gpio_request for BT_DEV_WAKE enable failed %d\n", err);
                         goto err_free_mem;
         }
-        err = gpio_direction_output(BT_DEV_WAKE, 1);
+        err = gpio_direction_output(BT_DEV_WAKE, 0);
         if (err) {
                         dev_err(&client->dev, "Failed to configure BT_DEV_WAKE enable as output %d\n", err);
                         goto err_free_mem;

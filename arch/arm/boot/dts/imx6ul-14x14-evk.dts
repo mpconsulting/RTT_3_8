@@ -353,12 +353,14 @@
 				MX6UL_PAD_GPIO1_IO06__GPIO1_IO06  0x10b0
 				MX6UL_PAD_CSI_DATA02__GPIO4_IO23  0x10b0
 				MX6UL_PAD_CSI_DATA03__GPIO4_IO24  0x80000000
-				MX6UL_PAD_GPIO1_IO00__GPIO1_IO00  0x11F0
+				MX6UL_PAD_GPIO1_IO00__GPIO1_IO00  0x10b0
 				MX6UL_PAD_GPIO1_IO02__GPIO1_IO02  0x10b0
 				MX6UL_PAD_GPIO1_IO03__GPIO1_IO03  0x10b0
 				MX6UL_PAD_GPIO1_IO05__GPIO1_IO05  0x10b0
 				MX6UL_PAD_GPIO1_IO04__GPIO1_IO04  0x80000000
 				MX6UL_PAD_GPIO1_IO01__GPIO1_IO01  0x80000000
+                                MX6UL_PAD_GPIO1_IO07__GPIO1_IO07  0x80000000
+                                MX6UL_PAD_GPIO1_IO08__GPIO1_IO08  0x80000000 
 				MX6UL_PAD_CSI_MCLK__GPIO4_IO17    0x10b0
                                 MX6UL_PAD_CSI_PIXCLK__GPIO4_IO18  0x10b0 
 				MX6UL_PAD_CSI_DATA00__GPIO4_IO21  0x10b0
@@ -712,6 +714,7 @@
 	status = "okay";
 };
 
+/*
 &tsc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_tsc>;
@@ -719,13 +722,14 @@
 	measure-delay-time = <0xffff>;
 	pre-charge-time = <0xfff>;
 	status = "okay";
-};
+};*/
 
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
 	status = "okay";
 };
+
 
 &uart2 {
 	pinctrl-names = "default";
@@ -736,6 +740,7 @@
 	/* pinctrl-0 = <&pinctrl_uart2dte>; */
 	status = "okay";
 };
+
 
 &uart3 {
         pinctrl-names = "default";
@@ -765,6 +770,7 @@
 &usbphy2 {
 	tx-d-cal = <0x5>;
 };
+
 
 &usdhc1 {
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
