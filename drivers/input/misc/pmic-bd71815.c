@@ -165,8 +165,6 @@ static int pmic_ldo_configure(struct pmic_data *pmic)
 	int error;
 	char recvbuf;
 
-	dev_info(pmic->dev, "Configuring pmic LDO4 and LOD5\n");
-
 	/* Configure LDO4 voltage */	
 	// Configure it to be set at 3.2V
         recvbuf = PMIC_LDO4_VOLT_REG_VALUE;
@@ -194,7 +192,6 @@ static int pmic_ldo_configure(struct pmic_data *pmic)
 
 	recvbuf = recvbuf & 0xF7; // clear bit 3
 	error = i2c_smbus_write_byte_data(pmic->client, PMIC_LDO_MODE1_REG_ADDR, recvbuf);
-	dev_info(pmic->dev, "Writing to LDO_MODE1 = 0x%x\n", recvbuf);
         if (error){
                 dev_err(pmic->dev, "Error writing 0x%x to PMIC_LDO_MODE1_REG_ADDR = 0x%d\n", recvbuf, error);
                 goto exit_ldo;
@@ -249,8 +246,10 @@ static int pmic_ldo_configure(struct pmic_data *pmic)
         }
 
 	dev_info(pmic->dev, "pmic ldo configured successfully\n");
+	return 0;
 
 exit_ldo:
+	dev_err(pmic->dev, "PMIC LDO configuration failed\n");
 	return error;	
 }
 
@@ -301,24 +300,20 @@ static ssize_t pmic_set_sierra_enable(struct device *dev, struct device_attribut
 static ssize_t pmic_set_gpiotest(struct device *dev, struct device_attribute *attr,
                                                 const char *buf, size_t count)
 {
-
-        struct i2c_client *client = to_i2c_client(dev);
-        struct pmic_data *pmic = i2c_get_clientdata(client);
         int error;
         unsigned int input;
-        char recvbuf;
 
         error = kstrtouint(buf, 10, &input);
         if (error < 0)
                 return error;
 
 	if(input == 0) {
-		dev_info(dev, "Making ldo5sel low \n");
-		gpio_set_value(PMIC_LDO5VSEL , 0);
+		dev_info(dev, "Making btregon low \n");
+		gpio_set_value(BT_REG_ON, 0);
 	}
 	if(input == 1) {
-		dev_info(dev, "Making ldo5sel high\n");
-		gpio_set_value(PMIC_LDO5VSEL , 1);
+		dev_info(dev, "Making btregon high\n");
+		gpio_set_value(BT_REG_ON , 1);
 	}
 
 	return count;
@@ -403,7 +398,7 @@ static struct attribute *pmic_attributes[] = {
 	&dev_attr_wlan_enable.attr,
 	&dev_attr_pmic_configure.attr,
 	&dev_attr_sierra_enable.attr,
-	&dev_attr_gpiotest,
+	&dev_attr_gpiotest.attr,
 	NULL
 };
 
@@ -556,9 +551,7 @@ static int pmic_probe(struct i2c_client *client,
 		goto err_free_sysfs;
         }
 
-
-#if 0 //For now BT is not enabled in the project 
-        /* CSI_DATA02( gpio4_23) to be configured as output and left high */
+#if 1 //For now BT is not enabled in the project 
         err = gpio_request(BT_REG_ON, "BT_REG_ON");
         if (err) {
                         dev_err(&client->dev, "gpio_request for BT_REG_ON enable failed %d\n", err);
@@ -569,7 +562,6 @@ static int pmic_probe(struct i2c_client *client,
                         dev_err(&client->dev, "Failed to configure BT_REG_ON enable as output %d\n", err);
                         goto err_free_mem;
         }
-        /* CSI_DATA02( gpio4_23) to be configured as output and left high */
         err = gpio_request(BT_DEV_WAKE, "BT_DEV_WAKE");
         if (err) {
                         dev_err(&client->dev, "gpio_request for BT_DEV_WAKE enable failed %d\n", err);
