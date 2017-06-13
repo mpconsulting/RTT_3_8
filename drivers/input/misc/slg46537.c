@@ -1,0 +1,389 @@
+/*
+ * Copyright (C) 2011 Kionix, Inc.
+ * Written by Chris Hudson <chudson@kionix.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+ * 02111-1307, USA
+ */
+
+#include <linux/delay.h>
+#include <linux/i2c.h>
+#include <linux/input.h>
+#include <linux/interrupt.h>
+#include <linux/module.h>
+#include <linux/slab.h>
+
+#define NAME			"slg46537"
+
+
+#define EV_VOLUME_UP             REL_X
+#define EV_VOLUME_DOWN           REL_Y
+#define EV_ANGLE_CHANGE          REL_Z
+#define EV_MAKE_CALL             REL_RX 
+#define EV_END_CALL              REL_RY
+
+#define SLG_VOLUME_UP_IO     0x08
+#define SLG_VOLUME_DOWN_IO   0x10
+#define SLG_CALL_IO          0x04
+#define SLG_POWER_IO         0x10
+
+#define SLG_IN_CALL_STATE    0x10
+#define SLG_END_CALL_STATE   0x20
+
+
+static int log_enabled = 0;
+
+struct slg_data {
+	struct i2c_client *client;
+	struct input_dev *input_dev;
+	struct device *dev;
+};
+
+
+static int slg_i2c_read(struct slg_data *slg, u8 addr, u8 *data, int len)
+{
+	int err;
+
+	struct i2c_msg msgs[] = {
+		{
+			.addr = slg->client->addr,
+			.flags = slg->client->flags,
+			.len = 1,
+			.buf = &addr,
+		},
+		{
+			.addr = slg->client->addr,
+			.flags = slg->client->flags | I2C_M_RD,
+			.len = len,
+			.buf = data,
+		},
+	};
+
+	err = i2c_transfer(slg->client->adapter, msgs, 2);
+	
+	if( err != 2) {
+		dev_err(slg->dev, "i2c error reading register 0x%x, err = %d \n", addr, err);
+	}
+	return err;
+	
+}
+
+
+/* Reads and matches the oscillator register, and returns 0 on success */
+static int slg_check_i2c(struct slg_data *slg)
+{
+        int error;
+        char recvbuf;
+
+        if (slg == NULL)
+                return -EINVAL;
+
+        error = slg_i2c_read(slg, 0xA7, &recvbuf , 1);
+        if (error != 2) {
+                dev_err(slg->dev, "%s: i2c check failed = %d\n",__func__,error);
+                return -EIO;
+        }
+        else {
+                if (recvbuf != 0x98) {
+                        dev_err(slg->dev, "%s: i2c check failed with result mismatch = 0x%x", __func__, recvbuf);
+                        return -EIO;
+                }
+        }
+
+        return 0;
+}
+
+
+
+static irqreturn_t slg_isr(int irq, void *data)
+{
+	struct slg_data *slg = data;
+	int err;
+	char recvbuf[2] = {0x00};
+	int dummyvalue = 2;
+	char savef0;
+
+	err = slg_i2c_read(slg, 0xF0, &recvbuf[0] , 1);
+	if (err != 2) {
+		dev_err(&slg->client->dev, "%s failed", __func__);
+		goto exit_irq;
+	}
+	if (log_enabled)
+		dev_info(&slg->client->dev, "SLG: 0xF0 read 0x%x \n", recvbuf[0]);
+
+	if ( (recvbuf[0] & SLG_VOLUME_UP_IO) && (recvbuf[0] & SLG_VOLUME_DOWN_IO) )
+	{
+		if (log_enabled)
+			dev_info(&slg->client->dev, "Sending decrease angle event\n");
+		input_report_rel(slg->input_dev, EV_ANGLE_CHANGE, dummyvalue);
+	}
+	else if (recvbuf[0] & SLG_VOLUME_UP_IO)
+	{
+		if (log_enabled)
+			dev_info(&slg->client->dev, " Sending volume up event\n");
+		input_report_rel(slg->input_dev, EV_VOLUME_UP, dummyvalue);
+	}
+	else if (recvbuf[0] & SLG_VOLUME_DOWN_IO)
+	{
+		if (log_enabled)
+			dev_info(&slg->client->dev, " Sending volume down event\n");
+		input_report_rel(slg->input_dev, EV_VOLUME_DOWN, dummyvalue);
+	}
+	else
+	{
+		savef0 = recvbuf[0];
+		recvbuf[0] = recvbuf[1]  = 0x00;
+        	err = slg_i2c_read(slg, 0xF5, recvbuf , 2);
+        	if (err < 0) {
+                	dev_err(&slg->client->dev, "%s: failed \n", __func__);
+			goto exit_irq;
+		}
+		if (log_enabled)
+        		dev_info(&slg->client->dev, "SLG: 0xF5 and 0xF6 read = 0x%x, 0x%x", recvbuf[0], recvbuf[1]);
+
+/*
+		//check for speakeron
+		if ((recvbuf[1] & SLG_POWER_IO) && (recvbuf[0] & SLG_IN_CALL))
+		{
+			//TODO look to use a toggle event
+			dev_info(&slg->client->dev, " Sending speaker out event\n");
+		}
+* Not needed since we have headphone detect pin now */
+		if ((recvbuf[1] & SLG_CALL_IO) && (recvbuf[0] & SLG_IN_CALL_STATE))
+		{
+			if (log_enabled)
+				dev_info(&slg->client->dev, " Sending start call event\n");
+	                input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
+		}
+		else if((recvbuf[1] & SLG_CALL_IO) && (recvbuf[0] & SLG_END_CALL_STATE))
+		{
+			if (log_enabled)
+				dev_info(&slg->client->dev, "Sending end call event\n");
+                        input_report_rel(slg->input_dev, EV_END_CALL, dummyvalue);
+		}
+		else
+		{
+			dev_info(&slg->client->dev, "%s: Unknown interrupt: registers F0, F5 and F6 read x%x, 0x%x, 0x%x",
+						    __func__, savef0, recvbuf[0], recvbuf[1]);
+			goto exit_irq;
+		}
+	}
+	input_sync(slg->input_dev);
+
+	
+exit_irq:
+	return IRQ_HANDLED;
+}
+
+
+/* Allow users to read any register on silego via i2c */
+static ssize_t slg_set_i2ctest(struct device *dev, struct device_attribute *attr,
+                                                const char *buf, size_t count)
+{
+        struct i2c_client *client = to_i2c_client(dev);
+        struct slg_data *slg = i2c_get_clientdata(client);
+        int error;
+	unsigned int input;
+	char recvbuf;
+	u8 reg_addr;
+
+        error = kstrtouint(buf, 10, &input);
+        if (error < 0)
+                return error;
+
+	reg_addr = (u8)(input & 0xFF);
+
+	error = slg_i2c_read(slg, reg_addr, &recvbuf , 1);
+	if (error != 2)
+		dev_err(dev, "%s: i2c read failed reading 0x%x with %d\n", __func__, reg_addr, error);
+
+	dev_info(dev, "Register address 0x%x reads 0x%x\n", reg_addr, recvbuf);
+
+        return count;
+}
+
+
+
+/* Allow users to read any register on silego via i2c */
+static ssize_t slg_set_logen(struct device *dev, struct device_attribute *attr,
+                                                const char *buf, size_t count)
+{
+        unsigned int input;
+	int error;
+
+        error = kstrtouint(buf, 10, &input);
+        if (error < 0)
+                return error;
+	
+	log_enabled = input;
+        return count;
+}
+
+
+static ssize_t slg_get_logen(struct device *dev,
+                        struct device_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%d\n", log_enabled);
+}
+
+static DEVICE_ATTR(i2ctest, S_IRUGO|S_IWUSR, NULL, slg_set_i2ctest);
+static DEVICE_ATTR(logen, S_IRUGO|S_IWUSR, slg_get_logen, slg_set_logen);
+
+static struct attribute *slg_attributes[] = {
+	&dev_attr_i2ctest.attr,
+	&dev_attr_logen.attr,
+	NULL
+};
+
+static struct attribute_group slg_attribute_group = {
+	.attrs = slg_attributes
+};
+
+static int slg_probe(struct i2c_client *client,
+				 const struct i2c_device_id *id)
+{
+	struct slg_data *slg;
+	int err;
+
+
+	dev_info(&client->dev, "25/5 %s\n", __func__);
+
+	if (!i2c_check_functionality(client->adapter,
+				I2C_FUNC_I2C | I2C_FUNC_SMBUS_BYTE_DATA)) {
+		dev_err(&client->dev, "client is not i2c capable\n");
+		return -ENXIO;
+	}
+
+	slg = kzalloc(sizeof(*slg), GFP_KERNEL);
+	if (!slg) {
+		dev_err(&client->dev,
+			"failed to allocate memory for module data\n");
+		return -ENOMEM;
+	}
+
+	slg->client = client;
+	slg->dev = &client->dev;
+	i2c_set_clientdata(client, slg);
+
+        /* Check i2c connectivity */
+        err = slg_check_i2c(slg);
+        if (err) {
+                dev_err(&client->dev, "SLG i2c communication failed: %d\n", err);
+                goto err_free_mem;
+        }
+
+	/* Register irq */
+#if 0
+	if (client->irq) {
+		err = request_threaded_irq(client->irq, NULL, slg_isr,
+					   IRQF_TRIGGER_RISING | IRQF_ONESHOT,
+					   "slg-irq", slg);
+		if (err) {
+			dev_err(&client->dev, "%s: request irq failed: %d\n", __func__,  err);
+			goto err_free_mem;
+		}
+	}
+#endif
+
+        if (client->irq) {
+                err = devm_request_threaded_irq(&client->dev, client->irq, NULL, slg_isr,
+                                           IRQF_TRIGGER_RISING | IRQF_ONESHOT,
+                                           "slg-irq", slg);
+                if (err) {
+                        dev_err(&client->dev, "%s: request irq failed: %d\n", __func__,  err);
+                        goto err_free_mem;
+                }
+        }
+
+	/* Configure input device */
+        slg->input_dev = devm_input_allocate_device(&client->dev);
+        if (!slg->input_dev) {
+                dev_dbg(&client->dev, "VIDI: unable to allocate input device\n");
+                goto err_free_irq;
+        }
+
+	__set_bit(EV_REL, slg->input_dev->evbit);
+        __set_bit(REL_X,  slg->input_dev->relbit);
+        __set_bit(REL_Y,  slg->input_dev->relbit);
+	__set_bit(REL_Z,  slg->input_dev->relbit);
+	__set_bit(REL_RX,  slg->input_dev->relbit);
+	__set_bit(REL_RY,  slg->input_dev->relbit);
+        slg->input_dev->name = "slg46537";
+        slg->input_dev->phys = "slg46537/input0";
+
+	
+        err = input_register_device(slg->input_dev);
+        if (err) {
+                dev_err(&client->dev, "%s: failed to register input device: %d\n",
+                        __func__, err);
+                goto err_free_irq;
+        }
+
+	/* Regsiter sysfs */
+        err = sysfs_create_group(&client->dev.kobj, &slg_attribute_group);
+	if (err) {
+			dev_err(&client->dev, "%s: sysfs create failed: %d\n", __func__, err);
+			goto err_destroy_input;
+	}
+ 
+
+	dev_info(&client->dev, "Silego probed successfully\n");
+	return 0;
+
+err_destroy_input:
+	input_unregister_device(slg->input_dev);
+err_free_irq:
+	free_irq(client->irq, slg);
+err_free_mem:
+	kfree(slg);
+	dev_err(&client->dev, "Silego probe failed\n");
+	return err;
+}
+
+static int slg_remove(struct i2c_client *client)
+{
+	struct slg_data *slg = i2c_get_clientdata(client);
+
+	if (client->irq) {
+		input_unregister_device(slg->input_dev);
+		sysfs_remove_group(&client->dev.kobj, &slg_attribute_group);
+		free_irq(client->irq, slg);
+	}
+	kfree(slg);
+
+	return 0;
+}
+
+static const struct i2c_device_id slg_id[] = {
+	{ NAME, 0 },
+	{ },
+};
+
+MODULE_DEVICE_TABLE(i2c, slg_id);
+
+static struct i2c_driver slg_driver = {
+	.driver = {
+		.name	= NAME,
+		.owner	= THIS_MODULE,
+	},
+	.probe		= slg_probe,
+	.remove		= slg_remove,
+	.id_table	= slg_id,
+};
+
+module_i2c_driver(slg_driver);
+
+MODULE_DESCRIPTION("Silego driver");
+MODULE_AUTHOR("viditha <viditha@mpconsultants.org>");
+MODULE_LICENSE("GPL");
