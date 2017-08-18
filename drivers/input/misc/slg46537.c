@@ -114,6 +114,7 @@ static irqreturn_t slg_isr(int irq, void *data)
 	int dummyvalue = 2;
 	char savef0;
 
+	mdelay(120);
 	err = slg_i2c_read(slg, 0xF0, &recvbuf[0] , 1);
 	if (err != 2) {
 		dev_err(&slg->client->dev, "%s failed", __func__);
@@ -257,7 +258,7 @@ static int slg_probe(struct i2c_client *client,
 	int err;
 
 
-	dev_info(&client->dev, "25/5 %s\n", __func__);
+	dev_info(&client->dev, "8/18 - 1 %s\n", __func__);
 
 	if (!i2c_check_functionality(client->adapter,
 				I2C_FUNC_I2C | I2C_FUNC_SMBUS_BYTE_DATA)) {
@@ -309,7 +310,7 @@ static int slg_probe(struct i2c_client *client,
 	/* Configure input device */
         slg->input_dev = devm_input_allocate_device(&client->dev);
         if (!slg->input_dev) {
-                dev_dbg(&client->dev, "VIDI: unable to allocate input device\n");
+                dev_dbg(&client->dev, "unable to allocate input device\n");
                 goto err_free_irq;
         }
 
