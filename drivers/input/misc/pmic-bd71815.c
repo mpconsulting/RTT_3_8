@@ -158,6 +158,50 @@ static ssize_t pmic_set_wlan_enable(struct device *dev, struct device_attribute 
 	return count;
 }
 
+/* Sysfs to enable /disable dsp gpio controls */
+static ssize_t pmic_set_dsp_enable(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	int error;
+	unsigned int input;
+
+	error = kstrtouint(buf, 10, &input);
+	if (error < 0)
+		return error;
+
+	if (input == 0) {
+		dev_info(dev, "%s: Turning off dsp", __func__);
+		gpio_set_value(AUDIO_DSP_RESET , 0);
+	}else {
+		dev_info(dev, "%s: Turning on dsp", __func__);
+		gpio_set_value(AUDIO_DSP_RESET , 1);
+	}
+	return count;
+}
+
+/* Sysfs to enable /disable cellular battery control */
+static ssize_t pmic_set_cellbatt_enable(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	int error;
+	unsigned int input;
+
+	error = kstrtouint(buf, 10, &input);
+	if (error < 0)
+		return error;
+
+	if (input == 0) {
+		dev_info(dev, "%s: Turning off cell batt", __func__);
+		gpio_set_value(CELL_BATT_EN , 0);
+	}
+	else {
+		dev_info(dev, "%s: Turning on cell batt", __func__);
+		gpio_set_value(CELL_BATT_EN , 1);
+	}
+	return count;
+}
 
 /* Configure pmic to 3.2V and turn on LDO4 */
 static int pmic_ldo_configure(struct pmic_data *pmic)
@@ -308,12 +352,12 @@ static ssize_t pmic_set_gpiotest(struct device *dev, struct device_attribute *at
                 return error;
 
 	if(input == 0) {
-		dev_info(dev, "Making btregon low \n");
-		gpio_set_value(BT_REG_ON, 0);
+		dev_info(dev, "Making cellbatt low \n");
+		gpio_set_value(CELL_BATT_EN, 0);
 	}
 	if(input == 1) {
-		dev_info(dev, "Making btregon high\n");
-		gpio_set_value(BT_REG_ON , 1);
+		dev_info(dev, "Making cellbat high\n");
+		gpio_set_value(CELL_BATT_EN, 1);
 	}
 
 	return count;
@@ -384,12 +428,40 @@ static ssize_t pmic_set_test(struct device *dev, struct device_attribute *attr,
 }
 
 
+static ssize_t pmic_get_battery_level(struct device *dev,
+                        struct device_attribute *attr, char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct pmic_data *pmic = i2c_get_clientdata(client);
+	int error;
+	uint8_t msb, lsb;
+	int batt_level = 0;
+
+	error = pmic_i2c_read(pmic, 0x5d, &msb, 1);
+	if (error != 2)
+		dev_err(dev, "Error reading 0x5d = 0x%d, err = %d", msb, error);
+
+	error = pmic_i2c_read(pmic, 0x5f, &lsb, 1);
+	if (error != 2)
+		dev_err(dev, "Error reading 0x5f = 0x%d, err = %d", lsb, error);
+
+	msb = msb & 0x1F;
+	batt_level = (msb << 8 ) | (lsb);
+
+	dev_info(dev, "\nBattery_level = %d\n", batt_level);
+	return sprintf(buf, "%d\n", batt_level);
+}
+
+
 static DEVICE_ATTR(wlan_enable, S_IRUGO|S_IWUSR, NULL, pmic_set_wlan_enable);
 static DEVICE_ATTR(test, S_IRUGO|S_IWUSR, NULL, pmic_set_test);
 static DEVICE_ATTR(i2ctest, S_IRUGO|S_IWUSR, NULL, pmic_set_i2ctest);
 static DEVICE_ATTR(pmic_configure, S_IRUGO|S_IWUSR, NULL, pmic_set_configure);
 static DEVICE_ATTR(sierra_enable, S_IRUGO|S_IWUSR, NULL, pmic_set_sierra_enable);
 static DEVICE_ATTR(gpiotest, S_IRUGO|S_IWUSR, NULL, pmic_set_gpiotest);
+static DEVICE_ATTR(dsp_enable, S_IRUGO|S_IWUSR, NULL, pmic_set_dsp_enable);
+static DEVICE_ATTR(cellbatt_enable, S_IRUGO|S_IWUSR, NULL, pmic_set_cellbatt_enable);
+static DEVICE_ATTR(battery_level, S_IRUGO|S_IWUSR, pmic_get_battery_level, NULL);
 
 
 static struct attribute *pmic_attributes[] = {
@@ -399,6 +471,9 @@ static struct attribute *pmic_attributes[] = {
 	&dev_attr_pmic_configure.attr,
 	&dev_attr_sierra_enable.attr,
 	&dev_attr_gpiotest.attr,
+	&dev_attr_dsp_enable.attr,
+	&dev_attr_cellbatt_enable.attr,
+	&dev_attr_battery_level.attr,
 	NULL
 };
 
@@ -413,7 +488,7 @@ static int pmic_probe(struct i2c_client *client,
 	int err;
 
 
-	dev_info(&client->dev, "%s\n", __func__);
+	dev_info(&client->dev,  "8/28   --- 1 %s\n", __func__);
 
 	if (!i2c_check_functionality(client->adapter,
 				I2C_FUNC_I2C | I2C_FUNC_SMBUS_BYTE_DATA)) {
@@ -516,6 +591,7 @@ static int pmic_probe(struct i2c_client *client,
 		goto err_free_sysfs;
         }
 
+
         /* SIERRA_PWR_ON to be configured as output */
         err = gpio_request(SIERRA_PWR_ON, "SIERRA_PWR_ON");
         if (err) {
@@ -539,7 +615,7 @@ static int pmic_probe(struct i2c_client *client,
 		goto err_free_sysfs;
         }
 
-        /* CELL_BATT_EN to be configured as output and left high */
+        /* CELL_BATT_EN to be configured as output and left low */
         err = gpio_request(CELL_BATT_EN, "CELL_BATT_EN");
         if (err) {
 		dev_err(&client->dev, "gpio_request for CELL_BATT_EN enable failed %d\n", err);

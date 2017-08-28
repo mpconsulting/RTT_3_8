@@ -24,6 +24,8 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 
+
+
 #define NAME			"slg46537"
 
 
@@ -32,6 +34,7 @@
 #define EV_ANGLE_CHANGE          REL_Z
 #define EV_MAKE_CALL             REL_RX 
 #define EV_END_CALL              REL_RY
+#define EV_BATTERY_TIMER         REL_RZ
 
 #define SLG_VOLUME_UP_IO     0x08
 #define SLG_VOLUME_DOWN_IO   0x10
@@ -48,6 +51,8 @@ struct slg_data {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
 	struct device *dev;
+	struct delayed_work battery_monitor_work;
+	int battery_monitor_enable;
 };
 
 
@@ -78,6 +83,8 @@ static int slg_i2c_read(struct slg_data *slg, u8 addr, u8 *data, int len)
 	return err;
 	
 }
+
+
 
 
 /* Reads and matches the oscillator register, and returns 0 on success */
@@ -187,6 +194,17 @@ exit_irq:
 	return IRQ_HANDLED;
 }
 
+static void slg_delayed_work(struct work_struct *work)
+{
+	struct slg_data *slg = container_of(work,
+					struct slg_data,
+					battery_monitor_work.work);
+
+	input_report_rel(slg->input_dev, EV_BATTERY_TIMER, 2);
+	input_sync(slg->input_dev);
+	schedule_delayed_work(&slg->battery_monitor_work, 
+					msecs_to_jiffies(600000));
+}
 
 /* Allow users to read any register on silego via i2c */
 static ssize_t slg_set_i2ctest(struct device *dev, struct device_attribute *attr,
@@ -214,7 +232,53 @@ static ssize_t slg_set_i2ctest(struct device *dev, struct device_attribute *attr
         return count;
 }
 
+static ssize_t slg_set_shutdown(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct slg_data *slg = i2c_get_clientdata(client);
+	int error;
 
+	dev_info(dev, "\nShutdown request recieved\n");
+	error = i2c_smbus_write_byte_data(slg->client, 0xCF, 0x40);
+	if (error)
+		dev_err(dev, "%s: Failed to write 0x40 to 0xCF with %d\n",__func__, error);
+	return count;
+}
+
+/* Allow users to enable/disable battery_monitoring feature */
+static ssize_t slg_set_batt_monitor_enable(struct device *dev, struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	unsigned int input;
+	int error;
+	struct i2c_client *client = to_i2c_client(dev);
+	struct slg_data *slg = i2c_get_clientdata(client);
+
+	error = kstrtouint(buf, 10, &input);
+	if (error < 0)
+		return error;
+
+	slg->battery_monitor_enable = input;
+	if (input) {
+		dev_info(dev, "Enabling battery monitoring feature\n");
+		cancel_delayed_work_sync(&slg->battery_monitor_work);
+		//First read neesds to be immediately after enabling and so scheduling it for 1 sec
+		schedule_delayed_work(&slg->battery_monitor_work,  msecs_to_jiffies(1000));
+	}else {
+		dev_info(dev, "Disabling battery monitoring feature\n");
+		cancel_delayed_work_sync(&slg->battery_monitor_work);
+	}
+	return count;
+}
+
+static ssize_t slg_get_batt_monitor_enable(struct device *dev,
+					struct device_attribute *attr, char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct slg_data *slg = i2c_get_clientdata(client);
+	return sprintf(buf, "%d\n", slg->battery_monitor_enable);
+}
 
 /* Allow users to read any register on silego via i2c */
 static ssize_t slg_set_logen(struct device *dev, struct device_attribute *attr,
@@ -240,10 +304,14 @@ static ssize_t slg_get_logen(struct device *dev,
 
 static DEVICE_ATTR(i2ctest, S_IRUGO|S_IWUSR, NULL, slg_set_i2ctest);
 static DEVICE_ATTR(logen, S_IRUGO|S_IWUSR, slg_get_logen, slg_set_logen);
+static DEVICE_ATTR(shutdown, S_IRUGO|S_IWUSR, NULL, slg_set_shutdown);
+static DEVICE_ATTR(battery_monitor_en, S_IRUGO|S_IWUSR, slg_get_batt_monitor_enable, slg_set_batt_monitor_enable);
 
 static struct attribute *slg_attributes[] = {
 	&dev_attr_i2ctest.attr,
 	&dev_attr_logen.attr,
+	&dev_attr_shutdown.attr,
+	&dev_attr_battery_monitor_en.attr,
 	NULL
 };
 
@@ -258,7 +326,7 @@ static int slg_probe(struct i2c_client *client,
 	int err;
 
 
-	dev_info(&client->dev, "8/18 - 1 %s\n", __func__);
+	dev_info(&client->dev, "8/28 - 2 %s\n", __func__);
 
 	if (!i2c_check_functionality(client->adapter,
 				I2C_FUNC_I2C | I2C_FUNC_SMBUS_BYTE_DATA)) {
@@ -285,18 +353,6 @@ static int slg_probe(struct i2c_client *client,
         }
 
 	/* Register irq */
-#if 0
-	if (client->irq) {
-		err = request_threaded_irq(client->irq, NULL, slg_isr,
-					   IRQF_TRIGGER_RISING | IRQF_ONESHOT,
-					   "slg-irq", slg);
-		if (err) {
-			dev_err(&client->dev, "%s: request irq failed: %d\n", __func__,  err);
-			goto err_free_mem;
-		}
-	}
-#endif
-
         if (client->irq) {
                 err = devm_request_threaded_irq(&client->dev, client->irq, NULL, slg_isr,
                                            IRQF_TRIGGER_RISING | IRQF_ONESHOT,
@@ -320,6 +376,7 @@ static int slg_probe(struct i2c_client *client,
 	__set_bit(REL_Z,  slg->input_dev->relbit);
 	__set_bit(REL_RX,  slg->input_dev->relbit);
 	__set_bit(REL_RY,  slg->input_dev->relbit);
+	__set_bit(REL_RZ,  slg->input_dev->relbit);
         slg->input_dev->name = "slg46537";
         slg->input_dev->phys = "slg46537/input0";
 
@@ -337,6 +394,9 @@ static int slg_probe(struct i2c_client *client,
 			dev_err(&client->dev, "%s: sysfs create failed: %d\n", __func__, err);
 			goto err_destroy_input;
 	}
+
+	/* Create work queue for battery monitoring */
+	INIT_DELAYED_WORK(&slg->battery_monitor_work, slg_delayed_work);
  
 
 	dev_info(&client->dev, "Silego probed successfully\n");
