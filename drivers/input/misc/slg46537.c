@@ -35,6 +35,7 @@
 #define EV_MAKE_CALL             REL_RX 
 #define EV_END_CALL              REL_RY
 #define EV_BATTERY_TIMER         REL_RZ
+#define EV_POWER_DOWN            REL_HWHEEL
 
 #define SLG_VOLUME_UP_IO     0x08
 #define SLG_VOLUME_DOWN_IO   0x10
@@ -52,6 +53,7 @@ struct slg_data {
 	struct input_dev *input_dev;
 	struct device *dev;
 	struct delayed_work battery_monitor_work;
+	struct delayed_work power_keypress_work;
 	int battery_monitor_enable;
 };
 
@@ -160,15 +162,17 @@ static irqreturn_t slg_isr(int irq, void *data)
 		if (log_enabled)
         		dev_info(&slg->client->dev, "SLG: 0xF5 and 0xF6 read = 0x%x, 0x%x", recvbuf[0], recvbuf[1]);
 
-/*
-		//check for speakeron
-		if ((recvbuf[1] & SLG_POWER_IO) && (recvbuf[0] & SLG_IN_CALL))
+
+		//check for power button press and hold
+		if ((recvbuf[1] & SLG_POWER_IO))
 		{
-			//TODO look to use a toggle event
-			dev_info(&slg->client->dev, " Sending speaker out event\n");
+			if (log_enabled)
+				dev_info(&slg->client->dev, "Power io pressed, starting a delay for 5 secs\n");
+			cancel_delayed_work_sync(&slg->power_keypress_work);
+			//schedule a delay of 5 seconds
+			schedule_delayed_work(&slg->power_keypress_work,  msecs_to_jiffies(2000));
 		}
-* Not needed since we have headphone detect pin now */
-		if ((recvbuf[1] & SLG_CALL_IO) && (recvbuf[0] & SLG_IN_CALL_STATE))
+		else if ((recvbuf[1] & SLG_CALL_IO) && (recvbuf[0] & SLG_IN_CALL_STATE))
 		{
 			if (log_enabled)
 				dev_info(&slg->client->dev, " Sending start call event\n");
@@ -194,7 +198,33 @@ exit_irq:
 	return IRQ_HANDLED;
 }
 
-static void slg_delayed_work(struct work_struct *work)
+static void slg_delayed_keypress_work(struct work_struct *work)
+{
+        struct slg_data *slg = container_of(work,
+                                        struct slg_data,
+                                        power_keypress_work.work);
+	char recvbuf = 0x00;
+	int err;
+
+	err = slg_i2c_read(slg, 0xF6, &recvbuf , 1);
+	if (err < 0) {
+		dev_err(&slg->client->dev, "%s: failed \n", __func__);
+		goto exit_keydelay;
+	}
+	//check if power button is still pressed
+	if ((recvbuf & SLG_POWER_IO)) {
+		if (log_enabled)
+			dev_info(&slg->client->dev, "Power key is still pressed, sending power key event\n");
+		input_report_rel(slg->input_dev, EV_POWER_DOWN, 2);
+		input_sync(slg->input_dev);
+	}
+
+exit_keydelay:
+	cancel_delayed_work_sync(&slg->power_keypress_work);
+}
+
+
+static void slg_delayed_battery_work(struct work_struct *work)
 {
 	struct slg_data *slg = container_of(work,
 					struct slg_data,
@@ -326,7 +356,7 @@ static int slg_probe(struct i2c_client *client,
 	int err;
 
 
-	dev_info(&client->dev, "8/28 - 2 %s\n", __func__);
+	dev_info(&client->dev, "8/29 - 5 %s\n", __func__);
 
 	if (!i2c_check_functionality(client->adapter,
 				I2C_FUNC_I2C | I2C_FUNC_SMBUS_BYTE_DATA)) {
@@ -377,6 +407,7 @@ static int slg_probe(struct i2c_client *client,
 	__set_bit(REL_RX,  slg->input_dev->relbit);
 	__set_bit(REL_RY,  slg->input_dev->relbit);
 	__set_bit(REL_RZ,  slg->input_dev->relbit);
+	__set_bit(REL_HWHEEL,  slg->input_dev->relbit);
         slg->input_dev->name = "slg46537";
         slg->input_dev->phys = "slg46537/input0";
 
@@ -396,8 +427,9 @@ static int slg_probe(struct i2c_client *client,
 	}
 
 	/* Create work queue for battery monitoring */
-	INIT_DELAYED_WORK(&slg->battery_monitor_work, slg_delayed_work);
- 
+	INIT_DELAYED_WORK(&slg->battery_monitor_work, slg_delayed_battery_work);
+	/* Create work queue for powerkey press tracking */
+	INIT_DELAYED_WORK(&slg->power_keypress_work, slg_delayed_keypress_work);
 
 	dev_info(&client->dev, "Silego probed successfully\n");
 	return 0;
