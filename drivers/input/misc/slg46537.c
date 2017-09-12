@@ -326,22 +326,67 @@ static ssize_t slg_set_logen(struct device *dev, struct device_attribute *attr,
 }
 
 
+
 static ssize_t slg_get_logen(struct device *dev,
                         struct device_attribute *attr, char *buf)
 {
         return sprintf(buf, "%d\n", log_enabled);
 }
 
+
+/* When the other end disconnects the call, this function is to be called to update state machine in silego */
+static ssize_t slg_set_endcall_state(struct device *dev, struct device_attribute *attr,
+                                                const char *buf, size_t count)
+{
+        struct i2c_client *client = to_i2c_client(dev);
+        struct slg_data *slg = i2c_get_clientdata(client);
+        int error;
+        unsigned int input;
+        char recvbuf;
+
+        error = kstrtouint(buf, 10, &input);
+        if (error < 0)
+                return error;
+
+	/* Set bit 1 of the 0xF4 register */
+        error = slg_i2c_read(slg, 0xF4, &recvbuf , 1);
+        if (error != 2)
+                dev_err(dev, "%s: i2c read failed reading 0xF4 with %d\n", __func__, error);
+
+	recvbuf = recvbuf | 0x02;
+
+        error = i2c_smbus_write_byte_data(slg->client, 0xF4, recvbuf);
+        if (error)
+                dev_err(dev, "%s - 1: Failed to write 0x%x to 0xF4 with %d\n",__func__, recvbuf, error);	
+
+	mdelay(100);
+
+	/* Clear bit 1 of 0xF4 register */
+        recvbuf = recvbuf & ~(0x02);
+
+        error = i2c_smbus_write_byte_data(slg->client, 0xF4, recvbuf);
+        if (error)
+                dev_err(dev, "%s - 2: Failed to write 0x%x to 0xF4 with %d\n",__func__, recvbuf, error);
+
+	dev_info(dev, "%s: update silego state to end call\n");
+
+        return count;
+}
+
+
 static DEVICE_ATTR(i2ctest, S_IRUGO|S_IWUSR, NULL, slg_set_i2ctest);
 static DEVICE_ATTR(logen, S_IRUGO|S_IWUSR, slg_get_logen, slg_set_logen);
 static DEVICE_ATTR(shutdown, S_IRUGO|S_IWUSR, NULL, slg_set_shutdown);
 static DEVICE_ATTR(battery_monitor_en, S_IRUGO|S_IWUSR, slg_get_batt_monitor_enable, slg_set_batt_monitor_enable);
+static DEVICE_ATTR(endcall, S_IRUGO|S_IWUSR, NULL, slg_set_endcall_state);
+
 
 static struct attribute *slg_attributes[] = {
 	&dev_attr_i2ctest.attr,
 	&dev_attr_logen.attr,
 	&dev_attr_shutdown.attr,
 	&dev_attr_battery_monitor_en.attr,
+	&dev_attr_endcall.attr,
 	NULL
 };
 
