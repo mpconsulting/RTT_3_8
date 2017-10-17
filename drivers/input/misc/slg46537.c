@@ -55,6 +55,7 @@ struct slg_data {
 	struct delayed_work battery_monitor_work;
 	struct delayed_work power_keypress_work;
 	int battery_monitor_enable;
+	int incall;
 };
 
 
@@ -163,26 +164,31 @@ static irqreturn_t slg_isr(int irq, void *data)
         		dev_info(&slg->client->dev, "SLG: 0xF5 and 0xF6 read = 0x%x, 0x%x", recvbuf[0], recvbuf[1]);
 
 
-		//check for power button press and hold
+		//check for power button press and hold, if press and hold for 5 secs turn off device.
 		if ((recvbuf[1] & SLG_POWER_IO))
 		{
 			if (log_enabled)
 				dev_info(&slg->client->dev, "Power io pressed, starting a delay for 5 secs\n");
 			cancel_delayed_work_sync(&slg->power_keypress_work);
-			//schedule a delay of 5 seconds
-			schedule_delayed_work(&slg->power_keypress_work,  msecs_to_jiffies(2000));
+			//schedule a delay of 5 seconds -- for now setting to 2sec since silego shuts off at 5 
+			schedule_delayed_work(&slg->power_keypress_work,  msecs_to_jiffies(2000)); //TBD VIDI
 		}
 		else if ((recvbuf[1] & SLG_CALL_IO) && (recvbuf[0] & SLG_IN_CALL_STATE))
 		{
-			if (log_enabled)
-				dev_info(&slg->client->dev, " Sending start call event\n");
-	                input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
+			if(slg->incall  == 0) {
+				if (log_enabled)
+					dev_info(&slg->client->dev, " Sending start call event\n");
+				input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
+				slg->incall = 1;
+			}			
+
 		}
 		else if((recvbuf[1] & SLG_CALL_IO) && (recvbuf[0] & SLG_END_CALL_STATE))
 		{
 			if (log_enabled)
 				dev_info(&slg->client->dev, "Sending end call event\n");
                         input_report_rel(slg->input_dev, EV_END_CALL, dummyvalue);
+			slg->incall = 0;
 		}
 		else
 		{
@@ -368,6 +374,7 @@ static ssize_t slg_set_endcall_state(struct device *dev, struct device_attribute
         if (error)
                 dev_err(dev, "%s - 2: Failed to write 0x%x to 0xF4 with %d\n",__func__, recvbuf, error);
 
+	slg->incall = 0; 
 	dev_info(dev, "%s: update silego state to end call\n");
 
         return count;
@@ -418,6 +425,7 @@ static int slg_probe(struct i2c_client *client,
 
 	slg->client = client;
 	slg->dev = &client->dev;
+	slg->incall = 0;
 	i2c_set_clientdata(client, slg);
 
         /* Check i2c connectivity */
