@@ -271,7 +271,7 @@
         pinctrl-names = "default";
         pinctrl-0 = <&pinctrl_gpio_call>;
 	    status = "okay";
-    }
+    };
 };
 
 &iomuxc {
