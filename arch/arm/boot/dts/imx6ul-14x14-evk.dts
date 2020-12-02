@@ -265,7 +265,7 @@
 		};
 	};
 };
-
+/*
 &gpio4 {
     gpio_425_input {
         gpio-hog;
@@ -274,6 +274,7 @@
         line-name = "gpio_425_in";
     };
 };
+*/
 
 &iomuxc {
 	pinctrl-names = "default";
@@ -758,6 +759,7 @@
 &uart3 {
         pinctrl-names = "default";
         pinctrl-0 = <&pinctrl_gpio_call &pinctrl_uart3>;
+	gpios = <&gpio4 25 GPIO_ACTIVE_HIGH>;
         status = "okay";
 };
 
