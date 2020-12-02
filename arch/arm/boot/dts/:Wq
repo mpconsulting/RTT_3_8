@@ -266,6 +266,12 @@
 	};
 };
 
+&gpio4 {
+        pinctrl-names = "default";
+    //    pinctrl-0 = <&pinctrl_gpio_call>;
+	//status = "okay";
+};
+
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog_1>;
@@ -748,7 +754,7 @@
 
 &uart3 {
         pinctrl-names = "default";
-        pinctrl-0 = <&pinctrl_gpio_call &pinctrl_uart3>;
+        pinctrl-0 = <&pinctrl_uart3>;
         status = "okay";
 };
 
