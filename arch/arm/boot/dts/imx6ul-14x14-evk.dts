@@ -267,10 +267,11 @@
 };
 
 &gpio4 {
-    gpio121 {
-        pinctrl-names = "default";
-        pinctrl-0 = <&pinctrl_gpio_call>;
-	    status = "okay";
+    gpio_425_input {
+        gpio-hog;
+        gpios = <25 GPIO_ACTIVE_HIGH>;
+        input;
+        line-name = "gpio_425_in";
     };
 };
 
@@ -756,7 +757,7 @@
 
 &uart3 {
         pinctrl-names = "default";
-        pinctrl-0 = <&pinctrl_uart3>;
+        pinctrl-0 = <&pinctrl_gpio_call &pinctrl_uart3>;
         status = "okay";
 };
 
