@@ -178,23 +178,23 @@ static irqreturn_t slg_isr(int irq, void *data)
 			//schedule a delay of 5 seconds -- for now setting to 2sec since silego shuts off at 5 
 			schedule_delayed_work(&slg->power_keypress_work,  msecs_to_jiffies(2000)); //TBD VIDI
 		}
-		else if ((recvbuf[1] & SLG_CALL_IO) && (recvbuf[0] & SLG_IN_CALL_STATE))
-		{
-			if(slg->incall  == 0) {
-				if (log_enabled)
-					dev_info(&slg->client->dev, " Sending start call event\n");
-				input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
-				slg->incall = 1;
-			}			
+		// else if ((recvbuf[1] & SLG_CALL_IO) && (recvbuf[0] & SLG_IN_CALL_STATE))
+		// {
+		// 	if(slg->incall  == 0) {
+		// 		if (log_enabled)
+		// 			dev_info(&slg->client->dev, " Sending start call event\n");
+		// 		input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
+		// 		slg->incall = 1;
+		// 	}			
 
-		}
-		else if((recvbuf[1] & SLG_CALL_IO) && (recvbuf[0] & SLG_END_CALL_STATE))
-		{
-			if (log_enabled)
-				dev_info(&slg->client->dev, "Sending end call event\n");
-                        input_report_rel(slg->input_dev, EV_END_CALL, dummyvalue);
-			slg->incall = 0;
-		}
+		// }
+		// else if((recvbuf[1] & SLG_CALL_IO) && (recvbuf[0] & SLG_END_CALL_STATE))
+		// {
+		// 	if (log_enabled)
+		// 		dev_info(&slg->client->dev, "Sending end call event\n");
+        //                 input_report_rel(slg->input_dev, EV_END_CALL, dummyvalue);
+		// 	slg->incall = 0;
+		// }
 		else
 		{
 			dev_info(&slg->client->dev, "%s: Unknown interrupt: registers F0, F5 and F6 read x%x, 0x%x, 0x%x",
@@ -575,7 +575,7 @@ static int __init ebbgpio_init(void){
    // This next call requests an interrupt line
    result = request_irq(irqNumber,             // The interrupt number requested
                         (irq_handler_t) ebbgpio_irq_handler, // The pointer to the handler function below
-                        0,   // Interrupt on rising edge and falling edge(button press and release)
+                        IRQF_TRIGGER_RISING,   // Interrupt on rising edge not falling edge(button press not release)
                         "ebb_gpio_handler",    // Used in /proc/interrupts to identify the owner
                         NULL);                 // The *dev_id for shared interrupt lines, NULL is okay
 
@@ -617,4 +617,4 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 /// This next calls are  mandatory -- they identify the initialization function
 /// and the cleanup function (as above).
 module_init(ebbgpio_init);
-module_exit(ebbgpio_exit);
+module_exit(ebbgpio_exit);						
