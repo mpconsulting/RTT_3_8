@@ -195,12 +195,12 @@ static irqreturn_t slg_isr(int irq, void *data)
         //                 input_report_rel(slg->input_dev, EV_END_CALL, dummyvalue);
 		// 	slg->incall = 0;
 		// }
-		else
-		{
-			dev_info(&slg->client->dev, "%s: Unknown interrupt: registers F0, F5 and F6 read x%x, 0x%x, 0x%x",
-						    __func__, savef0, recvbuf[0], recvbuf[1]);
-			goto exit_irq;
-		}
+		// else
+		// {
+		// 	dev_info(&slg->client->dev, "%s: Unknown interrupt: registers F0, F5 and F6 read x%x, 0x%x, 0x%x",
+		// 				    __func__, savef0, recvbuf[0], recvbuf[1]);
+		// 	goto exit_irq;
+		// }
 	}
 	input_sync(slg->input_dev);
 
