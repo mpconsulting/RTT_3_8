@@ -29,7 +29,7 @@
 #include <asm/io.h>
 #include <linux/kernel.h>
 #include <linux/gpio.h>                 // Required for the GPIO functions
-
+#include <time.h>
 
 
 #define NAME			"slg46537"
@@ -64,6 +64,7 @@ struct slg_data {
 	int incall;
 };
 
+static uint64_t get_epoch_time(void);
 
 static int slg_i2c_read(struct slg_data *slg, u8 addr, u8 *data, int len)
 {
@@ -612,36 +613,35 @@ static void __exit ebbgpio_exit(void){
  */
 
 
-static u64 get_nsecs(void)
+static uint64_t get_epoch_time(void)
 {
-	struct timespec ts;
-
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-
-	return ts.tv_sec * 1000000000ULL + ts.tv_nsec;
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1000000000ULL + ts.tv_nsec;
 }
 
 
 
 static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs){
+	
    printk(KERN_INFO "GPIO_TEST: Interrupt! (button state is %d)\n", gpio_get_value(gpioButton));
 
    if(gpio_get_value(gpioButton))
    {
 	   	buttonPressed = 1;
 	   	printk(KERN_INFO "button pressed is %d\n",buttonPressed);
-		u64 press_time = get_nsecs(); 
-		printk(KERN_INFO "press_time is %ul\n",press_time);
+		static u64 press_time = get_epoch_time(); 
+		printk(KERN_INFO "press_time is %ld\n",press_time);
 
    }
    else
    {
 	    printk(KERN_INFO "button pressed is %d\n",buttonPressed);
 		buttonPressed = 0;
-		u64 release_time =  get_nsecs();	  
-		printk(KERN_INFO "release_time is %ul\n",release_time);
+		static u64 release_time =  get_epoch_time();	  
+		printk(KERN_INFO "release_time is %ld\n",release_time);
    }
-   u64 total_time = release_time - press_time;
+   static u64 total_time = release_time - press_time;
    printk(KERN_INFO "total_time is %ul\n",total_time);
    numberPresses++;                         // Global counter, will be outputted when the module is unloaded
    return (irq_handler_t) IRQ_HANDLED;      // Announce that the IRQ has been handled correctly
