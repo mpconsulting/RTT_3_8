@@ -614,14 +614,10 @@ static void __exit ebbgpio_exit(void){
  */
 
 
-struct timespec {
-    time_t  tv_sec;     /* seconds */
-    long    tv_nsec;    /* nanoseconds */
-};
 
 void getnstimeofday(struct timespec *ts);
 
-static uint64_t get_epoch_time(void)
+uint64_t get_epoch_time(void)
 {
     struct timespec ts;
     getnstimeofday(ts);
@@ -638,7 +634,7 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
    {
 	   	buttonPressed = 1;
 	   	printk(KERN_INFO "button pressed is %d\n",buttonPressed);
-		static uint64_t press_time = get_epoch_time(); 
+		uint64_t press_time = get_epoch_time(); 
 		printk(KERN_INFO "press_time is %ld\n",press_time);
 
    }
@@ -646,10 +642,10 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
    {
 	    printk(KERN_INFO "button pressed is %d\n",buttonPressed);
 		buttonPressed = 0;
-		static uint64_t release_time =  get_epoch_time();	  
+		uint64_t release_time =  get_epoch_time();	  
 		printk(KERN_INFO "release_time is %ld\n",release_time);
    }
-   static uint64_t total_time = release_time - press_time;
+   uint64_t total_time = release_time - press_time;
    printk(KERN_INFO "total_time is %ul\n",total_time);
    numberPresses++;                         // Global counter, will be outputted when the module is unloaded
    return (irq_handler_t) IRQ_HANDLED;      // Announce that the IRQ has been handled correctly
