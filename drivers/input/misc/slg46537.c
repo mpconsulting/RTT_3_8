@@ -30,7 +30,7 @@
 #include <linux/kernel.h>
 #include <linux/gpio.h>                 // Required for the GPIO functions
 #include <linux/time.h>
-#include <linux/timekeeping.h>
+#include <linux/ktime.h>
 
 
 #define NAME			"slg46537"
@@ -625,7 +625,7 @@ static void __exit ebbgpio_exit(void){
 long get_epoch_time(void)
 {
  	struct timespec ts;
-    getnstimeofday(ts);
+    getnstimeofday(&ts);
     return ts.tv_sec * 1000000000ULL + ts.tv_nsec;
 }
 
