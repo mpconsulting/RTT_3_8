@@ -29,6 +29,7 @@
 #include <asm/io.h>
 #include <linux/kernel.h>
 #include <linux/gpio.h>                 // Required for the GPIO functions
+#include "builtin.h"
 
 
 
@@ -617,7 +618,7 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
    {
 	   	buttonPressed = 1;
 	   	printk(KERN_INFO "button pressed is %d\n",buttonPressed);
-		time_t press_time = time(NULL);	   
+		u64 press_time = get_nsecs(); 
 		printk(KERN_INFO "press_time is %ul\n",press_time);
 
    }
@@ -625,10 +626,10 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
    {
 	    printk(KERN_INFO "button pressed is %d\n",buttonPressed);
 		buttonPressed = 0;
-		time_t release_time = time(NULL);	  
+		u64 release_time =  get_nsecs();	  
 		printk(KERN_INFO "release_time is %ul\n",release_time);
    }
-   time_t total_time = release_time - press_time;
+   u64 total_time = release_time - press_time;
    printk(KERN_INFO "total_time is %ul\n",total_time);
    numberPresses++;                         // Global counter, will be outputted when the module is unloaded
    return (irq_handler_t) IRQ_HANDLED;      // Announce that the IRQ has been handled correctly
