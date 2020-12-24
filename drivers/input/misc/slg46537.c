@@ -31,6 +31,7 @@
 #include <linux/gpio.h>                 // Required for the GPIO functions
 
 
+
 #define NAME			"slg46537"
 
 
@@ -545,6 +546,7 @@ MODULE_LICENSE("GPL");
 static unsigned int gpioButton = 121;   ///< hard coding the button gpio for this example to P4_21 (GPIO121)
 static unsigned int irqNumber;          ///< Used to share the IRQ number within this file
 static unsigned int numberPresses = 0;  ///< For information, store the number of button presses
+static unsigned int buttonPressed = 0;
 
 /// Function prototype for the custom IRQ handler function -- see below for the implementation
 static irq_handler_t  ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs);
@@ -610,6 +612,24 @@ static void __exit ebbgpio_exit(void){
  */
 static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs){
    printk(KERN_INFO "GPIO_TEST: Interrupt! (button state is %d)\n", gpio_get_value(gpioButton));
+
+   if(gpio_get_value(gpioButton))
+   {
+	   	buttonPressed = 1;
+	   	printk(KERN_INFO "button pressed is %d\n",buttonPressed);
+		time_t press_time = time(NULL);	   
+		printk(KERN_INFO "press_time is %ul\n",press_time);
+
+   }
+   else
+   {
+	    printk(KERN_INFO "button pressed is %d\n",buttonPressed);
+		buttonPressed = 0;
+		time_t release_time = time(NULL);	  
+		printk(KERN_INFO "release_time is %ul\n",release_time);
+   }
+   time_t total_time = release_time - press_time;
+   printk(KERN_INFO "total_time is %ul\n",total_time);
    numberPresses++;                         // Global counter, will be outputted when the module is unloaded
    return (irq_handler_t) IRQ_HANDLED;      // Announce that the IRQ has been handled correctly
 }
