@@ -68,9 +68,9 @@ struct slg_data {
 long get_epoch_time(void);
 
 
-long release_time = 0;
-long press_time = 0;
-long total_time = 0;
+unsigned long release_time = 0;
+unsigned long press_time = 0;
+unsigned long total_time = 0;
 
 
 static int slg_i2c_read(struct slg_data *slg, u8 addr, u8 *data, int len)
@@ -645,8 +645,8 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
    }
    else
    {
-	    printk(KERN_INFO "button pressed is %d\n",buttonPressed);
 		buttonPressed = 0;
+	    printk(KERN_INFO "button pressed is %d\n",buttonPressed);
 		release_time =  get_epoch_time();	  
 		printk(KERN_INFO "release_time is %ld\n",release_time);
    }
