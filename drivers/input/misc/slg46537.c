@@ -54,7 +54,7 @@
 
 
 static int log_enabled = 0;
-
+static int call_started = 0;
 struct slg_data {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
@@ -651,7 +651,28 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 		printk(KERN_INFO "release_time is %ld\n",release_time);
    }
    total_time = release_time - press_time;
-   printk(KERN_INFO "total_time is %ul\n",total_time);
+   printk(KERN_INFO "total_time is %ld\n",total_time);
+
+   if(total_time >= 1)
+   {
+	   	
+		if(call_started == 0)
+		{
+			printk(KERN_INFO "valid button is pressed. make call event should trigger \n");
+			call_started = 1;
+			// input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
+			// slg->incall = 1;
+		}	
+		else if(call_started == 1)
+		{
+			printk(KERN_INFO "valid button is pressed. end call event should trigger as call is already started \n");
+			call_started = 0;
+			// input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
+			// slg->incall = 0;
+		}
+	   	
+   }
+
    numberPresses++;                         // Global counter, will be outputted when the module is unloaded
    return (irq_handler_t) IRQ_HANDLED;      // Announce that the IRQ has been handled correctly
 }
