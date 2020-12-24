@@ -29,7 +29,6 @@
 #include <asm/io.h>
 #include <linux/kernel.h>
 #include <linux/gpio.h>                 // Required for the GPIO functions
-#include "builtin.h"
 
 
 
@@ -611,6 +610,19 @@ static void __exit ebbgpio_exit(void){
  *  @param regs   h/w specific register values -- only really ever used for debugging.
  *  return returns IRQ_HANDLED if successful -- should return IRQ_NONE otherwise.
  */
+
+
+static u64 get_nsecs(void)
+{
+	struct timespec ts;
+
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+
+	return ts.tv_sec * 1000000000ULL + ts.tv_nsec;
+}
+
+
+
 static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs){
    printk(KERN_INFO "GPIO_TEST: Interrupt! (button state is %d)\n", gpio_get_value(gpioButton));
 
