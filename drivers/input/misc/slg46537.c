@@ -624,7 +624,7 @@ static void __exit ebbgpio_exit(void){
 
 long get_epoch_time(void)
 {
-	timespec ts;
+ 	struct timespec ts;
     getnstimeofday(ts);
     return ts.tv_sec * 1000000000ULL + ts.tv_nsec;
 }
