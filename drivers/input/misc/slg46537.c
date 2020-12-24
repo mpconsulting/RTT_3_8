@@ -626,7 +626,7 @@ long get_epoch_time(void)
 {
  	struct timespec ts;
     getnstimeofday(&ts);
-    return ts.tv_sec * 1000000000ULL + ts.tv_nsec;
+    return ts.tv_sec;// * 1000000000ULL + ts.tv_nsec;
 }
 
 
