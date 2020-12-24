@@ -65,7 +65,17 @@ struct slg_data {
 	int incall;
 };
 
-static uint64_t get_epoch_time(void);
+long get_epoch_time(void);
+struct timespec {
+    time_t  tv_sec;     /* seconds */
+    long    tv_nsec;    /* nanoseconds */
+};
+void getnstimeofday(struct timespec *ts);
+
+long release_time = 0;
+long press_time = 0;
+long total_time = 0;
+
 
 static int slg_i2c_read(struct slg_data *slg, u8 addr, u8 *data, int len)
 {
@@ -615,11 +625,9 @@ static void __exit ebbgpio_exit(void){
 
 
 
-void getnstimeofday(struct timespec *ts);
 
-uint64_t get_epoch_time(void)
+long get_epoch_time(void)
 {
-    struct timespec ts;
     getnstimeofday(ts);
     return ts.tv_sec * 1000000000ULL + ts.tv_nsec;
 }
@@ -634,7 +642,7 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
    {
 	   	buttonPressed = 1;
 	   	printk(KERN_INFO "button pressed is %d\n",buttonPressed);
-		uint64_t press_time = get_epoch_time(); 
+		press_time = get_epoch_time(); 
 		printk(KERN_INFO "press_time is %ld\n",press_time);
 
    }
@@ -642,10 +650,10 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
    {
 	    printk(KERN_INFO "button pressed is %d\n",buttonPressed);
 		buttonPressed = 0;
-		uint64_t release_time =  get_epoch_time();	  
+		release_time =  get_epoch_time();	  
 		printk(KERN_INFO "release_time is %ld\n",release_time);
    }
-   uint64_t total_time = release_time - press_time;
+   total_time = release_time - press_time;
    printk(KERN_INFO "total_time is %ul\n",total_time);
    numberPresses++;                         // Global counter, will be outputted when the module is unloaded
    return (irq_handler_t) IRQ_HANDLED;      // Announce that the IRQ has been handled correctly
