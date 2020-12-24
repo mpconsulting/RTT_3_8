@@ -563,7 +563,7 @@ static int __init ebbgpio_init(void){
 	gpio_request(gpioButton, "sysfs");       // Set up the gpioButton
 	gpio_direction_input(gpioButton);        // Set the button GPIO to be an input
 	gpio_set_debounce(gpioButton, 200);      // Debounce the button with a delay of 200ms
-	gpio_export(gpioButton, false);          // Causes gpio115 to appear in /sys/class/gpio
+	gpio_export(gpioButton, false);          // Causes gpio121 to appear in /sys/class/gpio
 	// the bool argument prevents the direction from being changed
 	// Perform a quick test to see that the button is working as expected on LKM load
 	printk(KERN_INFO "GPIO_TEST: The button state is currently: %d\n", gpio_get_value(gpioButton));
@@ -575,7 +575,7 @@ static int __init ebbgpio_init(void){
    // This next call requests an interrupt line
    result = request_irq(irqNumber,             // The interrupt number requested
                         (irq_handler_t) ebbgpio_irq_handler, // The pointer to the handler function below
-                        IRQF_TRIGGER_RISING,   // Interrupt on rising edge not falling edge(button press not release)
+                        IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,   // Interrupt on rising edge not falling edge(button press not release)
                         "ebb_gpio_handler",    // Used in /proc/interrupts to identify the owner
                         NULL);                 // The *dev_id for shared interrupt lines, NULL is okay
 
