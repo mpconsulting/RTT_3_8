@@ -29,7 +29,7 @@
 #include <asm/io.h>
 #include <linux/kernel.h>
 #include <linux/gpio.h>                 // Required for the GPIO functions
-#include <time.h>
+#include <linux/time.h>
 
 
 #define NAME			"slg46537"
@@ -623,7 +623,7 @@ static uint64_t get_epoch_time(void)
 
 
 static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs){
-	
+
    printk(KERN_INFO "GPIO_TEST: Interrupt! (button state is %d)\n", gpio_get_value(gpioButton));
 
    if(gpio_get_value(gpioButton))
