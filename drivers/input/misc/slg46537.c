@@ -653,7 +653,7 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 	}
 	printk(KERN_INFO "total_time is %ld\n", total_time);
 
-	printk(KERN_INFO "slg->incall is %ld\n", slg->incall);
+	printk(KERN_INFO "dummy_slg->incall is %ld\n", dummy_slg->incall);
 
 	if (total_time >= 1)
 	{
