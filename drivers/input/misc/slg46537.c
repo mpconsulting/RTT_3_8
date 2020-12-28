@@ -62,6 +62,8 @@ struct slg_data
 	int incall;
 };
 
+struct slg_data *dummy_slg;
+
 long get_epoch_time(void);
 
 static unsigned long release_time = 0;
@@ -429,6 +431,10 @@ static int slg_probe(struct i2c_client *client,
 		return -ENOMEM;
 	}
 
+	dummy_slg->client = client;
+	dummy_slg->dev = &client->dev;
+	dummy_slg->incall = 0;
+
 	slg->client = client;
 	slg->dev = &client->dev;
 	slg->incall = 0;
@@ -626,9 +632,6 @@ long get_epoch_time(void)
 static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs)
 {
 	int dummyvalue = 2;
-	struct device *dev = NULL;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct slg_data *slg = i2c_get_clientdata(client);
 
 	printk(KERN_INFO "GPIO_TEST: Interrupt! (button state is %d)\n", gpio_get_value(gpioButton));
 
@@ -657,21 +660,21 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 		total_time = 0;
 		if (call_started == 0)
 		{
-			// if(slg->incall  == 0) 
-			// {
+			if (dummy_slg->incall == 0)
+			{
 				printk(KERN_INFO "valid button is pressed. make call event should trigger \n");
 				call_started = 1;
-			// 	input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
-			// 	slg->incall = 1;
-			// }
+				input_report_rel(dummy_slg->input_dev, EV_MAKE_CALL, dummyvalue);
+				dummy_slg->incall = 1;
+			}
 		}
-		
+
 		else if (call_started == 1)
 		{
 			printk(KERN_INFO "valid button is pressed. end call event should trigger as call is already started \n");
 			call_started = 0;
-			// input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
-			// slg->incall = 0;
+			input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
+			dummy_slg->incall = 0;
 		}
 	}
 
@@ -683,3 +686,4 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 /// and the cleanup function (as above).
 module_init(ebbgpio_init);
 module_exit(ebbgpio_exit);
+
