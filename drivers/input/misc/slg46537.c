@@ -625,7 +625,7 @@ long get_epoch_time(void)
 
 static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs)
 {
-
+	int dummyvalue = 2;
 	struct slg_data *slg = NULL;
 	printk(KERN_INFO "GPIO_TEST: Interrupt! (button state is %d)\n", gpio_get_value(gpioButton));
 
