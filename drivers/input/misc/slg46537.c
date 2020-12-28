@@ -620,13 +620,13 @@ long get_epoch_time(void)
 {
 	struct timespec ts;
 	getnstimeofday(&ts);
-	return ts.tv_sec; // * 1000000000ULL + ts.tv_nsec;
+	return ts.tv_sec;
 }
 
 static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs)
 {
 	int dummyvalue = 2;
-	struct device *dev;
+	struct device *dev = NULL;
 	struct i2c_client *client = to_i2c_client(dev);
 	struct slg_data *slg = i2c_get_clientdata(client);
 
@@ -657,21 +657,21 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 		total_time = 0;
 		if (call_started == 0)
 		{
-			if(slg->incall  == 0) 
-			{
+			// if(slg->incall  == 0) 
+			// {
 				printk(KERN_INFO "valid button is pressed. make call event should trigger \n");
 				call_started = 1;
-				input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
-				slg->incall = 1;
-			}
+			// 	input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
+			// 	slg->incall = 1;
+			// }
 		}
 		
 		else if (call_started == 1)
 		{
 			printk(KERN_INFO "valid button is pressed. end call event should trigger as call is already started \n");
 			call_started = 0;
-			input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
-			slg->incall = 0;
+			// input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
+			// slg->incall = 0;
 		}
 	}
 
