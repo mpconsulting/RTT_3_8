@@ -629,7 +629,7 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 	struct device *dev;
 	struct i2c_client *client = to_i2c_client(dev);
 	struct slg_data *slg = i2c_get_clientdata(client);
-	
+
 	printk(KERN_INFO "GPIO_TEST: Interrupt! (button state is %d)\n", gpio_get_value(gpioButton));
 
 	if (gpio_get_value(gpioButton))
@@ -649,6 +649,9 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 		total_time = release_time - press_time;
 	}
 	printk(KERN_INFO "total_time is %ld\n", total_time);
+
+	printk(KERN_INFO "slg->incall is %ld\n", slg->incall);
+
 	if (total_time >= 1)
 	{
 		total_time = 0;
