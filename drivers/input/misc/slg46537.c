@@ -431,9 +431,7 @@ static int slg_probe(struct i2c_client *client,
 		return -ENOMEM;
 	}
 
-	dummy_slg->client = client;
-	dummy_slg->dev = &client->dev;
-	dummy_slg->incall = 0;
+	
 
 	slg->client = client;
 	slg->dev = &client->dev;
@@ -502,6 +500,14 @@ static int slg_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&slg->power_keypress_work, slg_delayed_keypress_work);
 
 	dev_info(&client->dev, "Silego probed successfully\n");
+
+	dummy_slg->client = client;
+	dummy_slg->dev = &client->dev;
+	dummy_slg->incall = 0;
+	dummy_slg->input_dev = slg->input_dev;
+	i2c_set_clientdata(client, dummy_slg);
+
+
 	return 0;
 
 err_destroy_input:
@@ -675,7 +681,6 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 			call_started = 0;
 			input_report_rel(dummy_slg->input_dev, EV_END_CALL, dummyvalue);
 			dummy_slg->incall = 0;
-			
 		}
 		input_sync(dummy_slg->input_dev);
 	}
