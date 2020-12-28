@@ -505,7 +505,7 @@ static int slg_probe(struct i2c_client *client,
 	dummy_slg->dev = &client->dev;
 	dummy_slg->incall = 0;
 	dummy_slg->input_dev = slg->input_dev;
-	i2c_set_clientdata(client, dummy_slg);
+	// i2c_set_clientdata(client, dummy_slg);
 
 
 	return 0;
@@ -664,27 +664,30 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 	if (total_time >= 1)
 	{
 		total_time = 0;
-		if (call_started == 0)
+		// if (call_started == 0 && dummy_slg->incall == 0)
+		if (dummy_slg->incall == 0)
 		{
-			if (dummy_slg->incall == 0)
-			{
 				printk(KERN_INFO "valid button is pressed. make call event should trigger \n");
-				call_started = 1;
+				//call_started = 1;
+
+				if (log_enabled)
+					dev_info(&dummy_slg->client->dev, " Sending start call event\n");
 				input_report_rel(dummy_slg->input_dev, EV_MAKE_CALL, dummyvalue);
 				dummy_slg->incall = 1;
-			}
 		}
 
-		else if (call_started == 1)
+		else if (dummy_slg->incall == 1)
 		{
 			printk(KERN_INFO "valid button is pressed. end call event should trigger as call is already started \n");
-			call_started = 0;
+			//call_started = 0;
+			if (log_enabled)
+				dev_info(&dummy_slg->client->dev, "Sending end call event\n");
 			input_report_rel(dummy_slg->input_dev, EV_END_CALL, dummyvalue);
 			dummy_slg->incall = 0;
 		}
-		input_sync(dummy_slg->input_dev);
+		
 	}
-
+	input_sync(dummy_slg->input_dev);
 	numberPresses++;				   // Global counter, will be outputted when the module is unloaded
 	return (irq_handler_t)IRQ_HANDLED; // Announce that the IRQ has been handled correctly
 }
