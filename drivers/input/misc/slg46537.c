@@ -673,9 +673,11 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 		{
 			printk(KERN_INFO "valid button is pressed. end call event should trigger as call is already started \n");
 			call_started = 0;
-			input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
+			input_report_rel(dummy_slg->input_dev, EV_END_CALL, dummyvalue);
 			dummy_slg->incall = 0;
+			
 		}
+		input_sync(dummy_slg->input_dev);
 	}
 
 	numberPresses++;				   // Global counter, will be outputted when the module is unloaded
