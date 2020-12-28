@@ -626,6 +626,7 @@ long get_epoch_time(void)
 static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs)
 {
 
+	struct slg_data *slg = NULL;
 	printk(KERN_INFO "GPIO_TEST: Interrupt! (button state is %d)\n", gpio_get_value(gpioButton));
 
 	if (gpio_get_value(gpioButton))
@@ -650,17 +651,21 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 		total_time = 0;
 		if (call_started == 0)
 		{
-			printk(KERN_INFO "valid button is pressed. make call event should trigger \n");
-			call_started = 1;
-			// input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
-			// slg->incall = 1;
+			if(slg->incall  == 0) 
+			{
+				printk(KERN_INFO "valid button is pressed. make call event should trigger \n");
+				call_started = 1;
+				input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
+				slg->incall = 1;
+			}
 		}
+		
 		else if (call_started == 1)
 		{
 			printk(KERN_INFO "valid button is pressed. end call event should trigger as call is already started \n");
 			call_started = 0;
-			// input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
-			// slg->incall = 0;
+			input_report_rel(slg->input_dev, EV_MAKE_CALL, dummyvalue);
+			slg->incall = 0;
 		}
 	}
 
