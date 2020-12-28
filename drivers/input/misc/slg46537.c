@@ -500,7 +500,7 @@ static int slg_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&slg->power_keypress_work, slg_delayed_keypress_work);
 
 	dev_info(&client->dev, "Silego probed successfully\n");
-	slg = kzalloc(sizeof(*dummy_slg), GFP_KERNEL);
+	dummy_slg = kzalloc(sizeof(*dummy_slg), GFP_KERNEL);
 	dummy_slg->client = client;
 	dummy_slg->dev = &client->dev;
 	dummy_slg->incall = 0;
