@@ -69,7 +69,8 @@ long get_epoch_time(void);
 static unsigned long release_time = 0;
 static unsigned long press_time = 0;
 static unsigned long total_time = 0;
-static int call_started = 0;
+static int last_event = 0;
+static int dummy_count = 0;
 
 static int slg_i2c_read(struct slg_data *slg, u8 addr, u8 *data, int len)
 {
@@ -431,8 +432,6 @@ static int slg_probe(struct i2c_client *client,
 		return -ENOMEM;
 	}
 
-	
-
 	slg->client = client;
 	slg->dev = &client->dev;
 	slg->incall = 0;
@@ -506,7 +505,6 @@ static int slg_probe(struct i2c_client *client,
 	dummy_slg->incall = 0;
 	dummy_slg->input_dev = slg->input_dev;
 	// i2c_set_clientdata(client, dummy_slg);
-
 
 	return 0;
 
@@ -656,38 +654,39 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 		printk(KERN_INFO "release_time is %ld\n", release_time);
 
 		total_time = release_time - press_time;
-	}
-	printk(KERN_INFO "total_time is %ld\n", total_time);
+		
 
-	printk(KERN_INFO "dummy_slg->incall is %ld\n", dummy_slg->incall);
+		printk(KERN_INFO "total_time is %ld\n", total_time);
 
-	if (total_time >= 1)
-	{
-		total_time = 0;
-		// if (call_started == 0 && dummy_slg->incall == 0)
-		if (dummy_slg->incall == 0)
+		printk(KERN_INFO "dummy_slg->incall is %ld\n", dummy_slg->incall);
+
+		if (total_time >= 1)
 		{
+			total_time = 0;
+			// if (call_started == 0 && dummy_slg->incall == 0)
+			if (dummy_slg->incall == 0)
+			{
 				printk(KERN_INFO "valid button is pressed. make call event should trigger \n");
-				//call_started = 1;
+				
 
 				if (log_enabled)
 					dev_info(&dummy_slg->client->dev, " Sending start call event\n");
 				input_report_rel(dummy_slg->input_dev, EV_MAKE_CALL, dummyvalue);
 				dummy_slg->incall = 1;
+			}
+			else if (dummy_slg->incall == 1)
+			{
+				printk(KERN_INFO "valid button is pressed. end call event should trigger as call is already started \n");
+				
+				if (log_enabled)
+					dev_info(&dummy_slg->client->dev, "Sending end call event\n");
+				input_report_rel(dummy_slg->input_dev, EV_END_CALL, dummyvalue);
+				dummy_slg->incall = 0;
+			}
 		}
-
-		else if (dummy_slg->incall == 1)
-		{
-			printk(KERN_INFO "valid button is pressed. end call event should trigger as call is already started \n");
-			//call_started = 0;
-			if (log_enabled)
-				dev_info(&dummy_slg->client->dev, "Sending end call event\n");
-			input_report_rel(dummy_slg->input_dev, EV_END_CALL, dummyvalue);
-			dummy_slg->incall = 0;
-		}
-		
+		input_sync(dummy_slg->input_dev);
 	}
-	input_sync(dummy_slg->input_dev);
+
 	numberPresses++;				   // Global counter, will be outputted when the module is unloaded
 	return (irq_handler_t)IRQ_HANDLED; // Announce that the IRQ has been handled correctly
 }
