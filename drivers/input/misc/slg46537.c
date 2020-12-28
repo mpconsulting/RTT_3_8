@@ -69,7 +69,6 @@ static unsigned long press_time = 0;
 static unsigned long total_time = 0;
 static int call_started = 0;
 
-
 static int slg_i2c_read(struct slg_data *slg, u8 addr, u8 *data, int len)
 {
 	int err;
@@ -645,10 +644,10 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 
 		total_time = release_time - press_time;
 	}
-
+	printk(KERN_INFO "total_time is %ld\n", total_time);
 	if (total_time >= 1)
 	{
-
+		total_time = 0;
 		if (call_started == 0)
 		{
 			printk(KERN_INFO "valid button is pressed. make call event should trigger \n");
