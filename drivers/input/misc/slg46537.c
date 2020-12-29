@@ -559,7 +559,7 @@ MODULE_LICENSE("GPL");
 static unsigned int gpioButton = 121;  ///< hard coding the button gpio for this example to P4_21 (GPIO121)
 static unsigned int irqNumber;		   ///< Used to share the IRQ number within this file
 static unsigned int numberPresses = 0; ///< For information, store the number of button presses
-static unsigned int buttonPressed = 0;
+static unsigned int button_current_state = 0;
 
 /// Function prototype for the custom IRQ handler function -- see below for the implementation
 static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs);
@@ -639,17 +639,17 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 
 	printk(KERN_INFO "GPIO_TEST: Interrupt! (button state is %d)\n", gpio_get_value(gpioButton));
 
-	if (gpio_get_value(gpioButton))
+	button_current_state = gpio_get_value(gpioButton);
+
+	if (button_current_state == 1 && button_previous_state != button_current_state)
 	{
-		buttonPressed = 1;
-		printk(KERN_INFO "button pressed is %d\n", buttonPressed);
+		printk(KERN_INFO "button pressed is %d\n", button_current_state);
 		press_time = get_epoch_time();
 		printk(KERN_INFO "press_time is %ld\n", press_time);
 	}
-	else
+	else if (button_current_state == 0 && button_previous_state != button_current_state) 
 	{
-		buttonPressed = 0;
-		printk(KERN_INFO "button pressed is %d\n", buttonPressed);
+		printk(KERN_INFO "button pressed is %d\n", button_current_state);
 		release_time = get_epoch_time();
 		printk(KERN_INFO "release_time is %ld\n", release_time);
 
@@ -663,7 +663,6 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 		if (total_time >= 1)
 		{
 			total_time = 0;
-			// if (call_started == 0 && dummy_slg->incall == 0)
 			if (dummy_slg->incall == 0)
 			{
 				printk(KERN_INFO "valid button is pressed. make call event should trigger \n");
@@ -685,6 +684,7 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 			}
 		}
 		input_sync(dummy_slg->input_dev);
+		button_previous_state == gpio_get_value(gpioButton);
 	}
 
 	numberPresses++;				   // Global counter, will be outputted when the module is unloaded
