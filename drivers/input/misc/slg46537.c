@@ -178,21 +178,7 @@ static irqreturn_t slg_isr(int irq, void *data)
 			//schedule a delay of 5 seconds -- for now setting to 2sec since silego shuts off at 5
 			schedule_delayed_work(&slg->power_keypress_work, msecs_to_jiffies(2000)); //TBD VIDI
 		}
-		else if ((recvbuf[0] & SLG_IN_CALL_STATE))
-		{
-				dummy_slg->incall = 1;
-				printk(KERN_INFO "SLG_IN_CALL_STATE \n");
-		}
-		else if((recvbuf[0] & SLG_END_CALL_STATE))
-		{
-			dummy_slg->incall = 0;
-			printk(KERN_INFO "SLG_END_CALL_STATE \n");
-		}
-		else
-		{
-			printk(KERN_INFO "else condition executing  0x%x, 0x%x\n", recvbuf[0], recvbuf[1]);
-		}
-
+		
 		// else if ((recvbuf[1] & SLG_CALL_IO) && (recvbuf[0] & SLG_IN_CALL_STATE))
 		// {
 		// 	if(slg->incall  == 0) {
@@ -395,6 +381,7 @@ static ssize_t slg_set_endcall_state(struct device *dev, struct device_attribute
 		dev_err(dev, "%s - 2: Failed to write 0x%x to 0xF4 with %d\n", __func__, recvbuf, error);
 
 	slg->incall = 0;
+	dummy_slg->incall = 0;
 	dev_info(dev, "%s: update silego state to end call\n");
 
 	return count;
