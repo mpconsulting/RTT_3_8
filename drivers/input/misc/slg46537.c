@@ -684,7 +684,7 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 			}
 		}
 		input_sync(dummy_slg->input_dev);
-		button_previous_state == gpio_get_value(gpioButton);
+		button_previous_state = button_current_state;
 	}
 
 	numberPresses++;				   // Global counter, will be outputted when the module is unloaded
