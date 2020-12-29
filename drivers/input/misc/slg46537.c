@@ -178,6 +178,15 @@ static irqreturn_t slg_isr(int irq, void *data)
 			//schedule a delay of 5 seconds -- for now setting to 2sec since silego shuts off at 5
 			schedule_delayed_work(&slg->power_keypress_work, msecs_to_jiffies(2000)); //TBD VIDI
 		}
+		else if ((recvbuf[0] & SLG_IN_CALL_STATE))
+		{
+				dummy_slg->incall = 1;
+		}
+		else if((recvbuf[0] & SLG_END_CALL_STATE))
+		{
+			dummy_slg->incall = 0;
+		}
+
 		// else if ((recvbuf[1] & SLG_CALL_IO) && (recvbuf[0] & SLG_IN_CALL_STATE))
 		// {
 		// 	if(slg->incall  == 0) {
