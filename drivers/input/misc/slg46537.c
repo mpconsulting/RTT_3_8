@@ -640,8 +640,6 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 	printk(KERN_INFO "GPIO_TEST: Interrupt! (button state is %d)\n", gpio_get_value(gpioButton));
 
 	button_current_state = gpio_get_value(gpioButton);
-	printk(KERN_INFO "button_previous_state before condition is %d\n", button_previous_state);
-	printk(KERN_INFO "button_current_state before condition is %d\n", button_current_state);
 
 	if (button_current_state == 1 && button_previous_state != button_current_state)
 	{
@@ -661,33 +659,31 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 
 		printk(KERN_INFO "dummy_slg->incall is %ld\n", dummy_slg->incall);
 
-		if (total_time >= 1)
+		// if (total_time >= 1)
+		// {
+		// 	total_time = 0;
+		if (dummy_slg->incall == 0)
 		{
-			total_time = 0;
-			if (dummy_slg->incall == 0)
-			{
-				printk(KERN_INFO "valid button is pressed. make call event should trigger \n");
+			printk(KERN_INFO "valid button is pressed. make call event should trigger \n");
 
-				if (log_enabled)
-					dev_info(&dummy_slg->client->dev, " Sending start call event\n");
-				input_report_rel(dummy_slg->input_dev, EV_MAKE_CALL, dummyvalue);
-				dummy_slg->incall = 1;
-			}
-			else if (dummy_slg->incall == 1)
-			{
-				printk(KERN_INFO "valid button is pressed. end call event should trigger as call is already started \n");
-
-				if (log_enabled)
-					dev_info(&dummy_slg->client->dev, "Sending end call event\n");
-				input_report_rel(dummy_slg->input_dev, EV_END_CALL, dummyvalue);
-				dummy_slg->incall = 0;
-			}
+			if (log_enabled)
+				dev_info(&dummy_slg->client->dev, " Sending start call event\n");
+			input_report_rel(dummy_slg->input_dev, EV_MAKE_CALL, dummyvalue);
+			dummy_slg->incall = 1;
 		}
+		else if (dummy_slg->incall == 1)
+		{
+			printk(KERN_INFO "valid button is pressed. end call event should trigger as call is already started \n");
+
+			if (log_enabled)
+				dev_info(&dummy_slg->client->dev, "Sending end call event\n");
+			input_report_rel(dummy_slg->input_dev, EV_END_CALL, dummyvalue);
+			dummy_slg->incall = 0;
+		}
+		// }
 	}
 	input_sync(dummy_slg->input_dev);
 	button_previous_state = button_current_state;
-	printk(KERN_INFO "button_previous_state after condition is %d\n", button_previous_state);
-	printk(KERN_INFO "button_current_state after condition is %d\n", button_current_state);
 
 	numberPresses++;				   // Global counter, will be outputted when the module is unloaded
 	return (irq_handler_t)IRQ_HANDLED; // Announce that the IRQ has been handled correctly
