@@ -188,6 +188,10 @@ static irqreturn_t slg_isr(int irq, void *data)
 			dummy_slg->incall = 0;
 			printk(KERN_INFO "SLG_END_CALL_STATE \n");
 		}
+		else
+		{
+			printk(KERN_INFO "else condition executing  0x%x, 0x%x\n", recvbuf[0], recvbuf[1]);
+		}
 
 		// else if ((recvbuf[1] & SLG_CALL_IO) && (recvbuf[0] & SLG_IN_CALL_STATE))
 		// {
