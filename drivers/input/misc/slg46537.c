@@ -560,7 +560,7 @@ static unsigned int gpioButton = 121;  ///< hard coding the button gpio for this
 static unsigned int irqNumber;		   ///< Used to share the IRQ number within this file
 static unsigned int numberPresses = 0; ///< For information, store the number of button presses
 static unsigned int button_current_state = 0;
-
+static unsigned int button_previous_state = 0;
 /// Function prototype for the custom IRQ handler function -- see below for the implementation
 static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs);
 
