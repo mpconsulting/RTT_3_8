@@ -64,13 +64,6 @@ struct slg_data
 
 struct slg_data *dummy_slg;
 
-long get_epoch_time(void);
-
-static unsigned long release_time = 0;
-static unsigned long press_time = 0;
-static unsigned long total_time = 0;
-static int last_event = 0;
-static int dummy_count = 0;
 
 static int slg_i2c_read(struct slg_data *slg, u8 addr, u8 *data, int len)
 {
@@ -561,6 +554,14 @@ static unsigned int irqNumber;		   ///< Used to share the IRQ number within this
 static unsigned int numberPresses = 0; ///< For information, store the number of button presses
 static unsigned int button_current_state = 0;
 static unsigned int button_previous_state = 0;
+
+long get_epoch_time(void);
+
+static unsigned long release_time = 0;
+static unsigned long press_time = 0;
+static unsigned long total_time = 0;
+
+
 /// Function prototype for the custom IRQ handler function -- see below for the implementation
 static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs);
 
@@ -578,7 +579,7 @@ static int __init ebbgpio_init(void)
 
 	gpio_request(gpioButton, "sysfs");	// Set up the gpioButton
 	gpio_direction_input(gpioButton);	// Set the button GPIO to be an input
-	gpio_set_debounce(gpioButton, 350); // Debounce the button with a delay of 200ms
+	gpio_set_debounce(gpioButton, 200); // Debounce the button with a delay of 200ms
 	gpio_export(gpioButton, false);		// Causes gpio121 to appear in /sys/class/gpio
 	// the bool argument prevents the direction from being changed
 	// Perform a quick test to see that the button is working as expected on LKM load
@@ -637,31 +638,24 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 {
 	int dummyvalue = 2;
 
-	printk(KERN_INFO "GPIO_TEST: Interrupt! (button state is %d)\n", gpio_get_value(gpioButton));
-
 	button_current_state = gpio_get_value(gpioButton);
 
 	if (button_current_state == 1 && button_previous_state != button_current_state)
 	{
-		printk(KERN_INFO "button pressed is %d\n", button_current_state);
+		// printk(KERN_INFO "button pressed is %d\n", button_current_state);
 		press_time = get_epoch_time();
-		printk(KERN_INFO "press_time is %ld\n", press_time);
+		// printk(KERN_INFO "press_time is %ld\n", press_time);
 	}
 	else if (button_current_state == 0 && button_previous_state != button_current_state)
 	{
-		printk(KERN_INFO "button pressed is %d\n", button_current_state);
+		// printk(KERN_INFO "button pressed is %d\n", button_current_state);
 		release_time = get_epoch_time();
-		printk(KERN_INFO "release_time is %ld\n", release_time);
+		// printk(KERN_INFO "release_time is %ld\n", release_time);
 
 		total_time = release_time - press_time;
 
-		printk(KERN_INFO "total_time is %ld\n", total_time);
+		// printk(KERN_INFO "total_time is %ld\n", total_time);
 
-		printk(KERN_INFO "dummy_slg->incall is %ld\n", dummy_slg->incall);
-
-		// if (total_time >= 1)
-		// {
-		// 	total_time = 0;
 		if (dummy_slg->incall == 0)
 		{
 			printk(KERN_INFO "valid button is pressed. make call event should trigger \n");
@@ -680,7 +674,6 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 			input_report_rel(dummy_slg->input_dev, EV_END_CALL, dummyvalue);
 			dummy_slg->incall = 0;
 		}
-		// }
 	}
 	input_sync(dummy_slg->input_dev);
 	button_previous_state = button_current_state;
