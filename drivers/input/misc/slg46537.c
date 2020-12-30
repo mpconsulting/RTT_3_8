@@ -508,7 +508,7 @@ static int slg_probe(struct i2c_client *client,
 	/* Create work queue for powerkey press tracking */
 	INIT_DELAYED_WORK(&slg->power_keypress_work, slg_delayed_keypress_work);
 /* Create work queue for call button press tracking */
-	INIT_DELAYED_WORK(&slg->call_keypress_work, slg_delayed_call_keypress_work);
+	
 
 	dev_info(&client->dev, "Silego probed successfully\n");
 	dummy_slg = kzalloc(sizeof(*dummy_slg), GFP_KERNEL);
@@ -516,8 +516,7 @@ static int slg_probe(struct i2c_client *client,
 	dummy_slg->dev = &client->dev;
 	dummy_slg->incall = 0;
 	dummy_slg->input_dev = slg->input_dev;
-	// i2c_set_clientdata(client, dummy_slg);
-
+	INIT_DELAYED_WORK(&dummy_slg->call_keypress_work, slg_delayed_call_keypress_work);
 	return 0;
 
 err_destroy_input:
