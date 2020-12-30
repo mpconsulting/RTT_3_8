@@ -58,6 +58,7 @@ struct slg_data
 	struct device *dev;
 	struct delayed_work battery_monitor_work;
 	struct delayed_work power_keypress_work;
+	struct delayed_work call_keypress_work;
 	int battery_monitor_enable;
 	int incall;
 };
@@ -234,6 +235,20 @@ static void slg_delayed_keypress_work(struct work_struct *work)
 
 exit_keydelay:
 	cancel_delayed_work_sync(&slg->power_keypress_work);
+}
+
+// ckr 
+
+static void slg_delayed_call_keypress_work(struct work_struct *work)
+{
+	struct slg_data *slg = container_of(work,
+										struct slg_data,
+										call_keypress_work.work);
+	
+	//check if power button is still pressed
+	printk(KERN_INFO "2 sec timer for call button  \n");
+
+
 }
 
 static void slg_delayed_battery_work(struct work_struct *work)
@@ -492,6 +507,8 @@ static int slg_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&slg->battery_monitor_work, slg_delayed_battery_work);
 	/* Create work queue for powerkey press tracking */
 	INIT_DELAYED_WORK(&slg->power_keypress_work, slg_delayed_keypress_work);
+/* Create work queue for call button press tracking */
+	INIT_DELAYED_WORK(&slg->call_keypress_work, slg_delayed_call_keypress_work);
 
 	dev_info(&client->dev, "Silego probed successfully\n");
 	dummy_slg = kzalloc(sizeof(*dummy_slg), GFP_KERNEL);
@@ -644,20 +661,17 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 
 	if (button_current_state == 1 && button_previous_state != button_current_state)
 	{
-		// printk(KERN_INFO "button pressed is %d\n", button_current_state);
 		press_time = get_epoch_time();
-		// printk(KERN_INFO "press_time is %ld\n", press_time);
 	}
 	else if (button_current_state == 0 && button_previous_state != button_current_state)
 	{
-		// printk(KERN_INFO "button pressed is %d\n", button_current_state);
 		release_time = get_epoch_time();
-		// printk(KERN_INFO "release_time is %ld\n", release_time);
-
+	
 		total_time = release_time - press_time;
 
-		// printk(KERN_INFO "total_time is %ld\n", total_time);
-
+		cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
+		schedule_delayed_work(&dummy_slg->call_keypress_work, msecs_to_jiffies(2000));
+		
 		if (dummy_slg->incall == 0)
 		{
 			printk(KERN_INFO "valid button is pressed. make call event should trigger \n");
@@ -688,4 +702,5 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 /// and the cleanup function (as above).
 module_init(ebbgpio_init);
 module_exit(ebbgpio_exit);
+
 
