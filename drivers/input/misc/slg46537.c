@@ -238,7 +238,7 @@ exit_keydelay:
 	cancel_delayed_work_sync(&slg->power_keypress_work);
 }
 
-// ckr
+/* callback funtion for call button . 2 sec timer callback for detection of various events of button */
 
 static void slg_delayed_call_keypress_work(struct work_struct *work)
 {
@@ -250,7 +250,7 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 	//check if power button is still pressed
 	printk(KERN_INFO "2 sec timer for call button  \n");
 
-	if (total_press >= 4)
+	if (total_press >= 4)  /* for multiple detection of call_button  */
 	{
 		printk(KERN_INFO "call button pressed multiple times  \n");
 		double_press = 1;
@@ -264,7 +264,7 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 			printk(KERN_INFO "valid double press detected. double press event should trigger \n");
 		}
 	}
-	else
+	else   /* for single detection of call_button  */
 	{
 		printk(KERN_INFO "call button pressed single time  \n");
 		if (dummy_slg->incall == 0 && double_press == 0)
@@ -699,8 +699,6 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 
 	button_current_state = gpio_get_value(gpioButton);
 
-	// printk(KERN_INFO "button event occured. total press is = %d \n", total_press);
-
 	if (button_current_state == 1 && button_previous_state != button_current_state)
 	{
 		total_press++;
@@ -718,25 +716,6 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 			cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
 			schedule_delayed_work(&dummy_slg->call_keypress_work, msecs_to_jiffies(2000));
 		}
-
-		// if (dummy_slg->incall == 0)
-		// {
-		// 	printk(KERN_INFO "valid button is pressed. make call event should trigger \n");
-
-		// 	if (log_enabled)
-		// 		dev_info(&dummy_slg->client->dev, " Sending start call event\n");
-		// 	input_report_rel(dummy_slg->input_dev, EV_MAKE_CALL, dummyvalue);
-		// 	dummy_slg->incall = 1;
-		// }
-		// else if (dummy_slg->incall == 1)
-		// {
-		// 	printk(KERN_INFO "valid button is pressed. end call event should trigger as call is already started \n");
-
-		// 	if (log_enabled)
-		// 		dev_info(&dummy_slg->client->dev, "Sending end call event\n");
-		// 	input_report_rel(dummy_slg->input_dev, EV_END_CALL, dummyvalue);
-		// 	dummy_slg->incall = 0;
-		// }
 	}
 	button_previous_state = button_current_state;
 
