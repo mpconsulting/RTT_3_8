@@ -38,6 +38,7 @@
 #define EV_VOLUME_DOWN REL_Y
 #define EV_ANGLE_CHANGE REL_Z
 #define EV_MAKE_CALL REL_RX
+#define EV_MAKE_CALL_2 REL_DIAL
 #define EV_END_CALL REL_RY
 #define EV_BATTERY_TIMER REL_RZ
 #define EV_POWER_DOWN REL_HWHEEL
@@ -262,6 +263,8 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 		else
 		{
 			printk(KERN_INFO "valid double press detected. double press event should trigger \n");
+			input_report_rel(dummy_slg->input_dev, EV_MAKE_CALL_2, dummyvalue);
+			dummy_slg->incall = 1;
 		}
 	}
 	else   /* for single detection of call_button  */
