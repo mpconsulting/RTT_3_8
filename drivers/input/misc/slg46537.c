@@ -50,7 +50,6 @@
 #define SLG_IN_CALL_STATE 0x10
 #define SLG_END_CALL_STATE 0x20
 
-
 static unsigned int total_press = 0;
 
 static int log_enabled = 0;
@@ -250,8 +249,8 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 
 	//check if power button is still pressed
 	printk(KERN_INFO "2 sec timer for call button  \n");
-	
-	if(total_press >= 4)
+
+	if (total_press >= 4)
 	{
 		printk(KERN_INFO "call button pressed multiple times  \n");
 	}
@@ -260,7 +259,7 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 		printk(KERN_INFO "call button pressed single time  \n");
 	}
 
-	cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
+//	cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
 	total_press = 0;
 }
 
@@ -670,6 +669,7 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 	button_current_state = gpio_get_value(gpioButton);
 
 	total_press++;
+	printk(KERN_INFO "button event occured. total press is = %d \n",total_press);
 
 	if (button_current_state == 1 && button_previous_state != button_current_state)
 	{
