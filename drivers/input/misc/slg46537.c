@@ -702,7 +702,7 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 	int dummyvalue = 2;
 
 	button_current_state = gpio_get_value(gpioButton);
-	printk(KERN_INFO "IRQ! current=%u, prev=%u, total_presses=%u, numPresses=%u\n", button_current_state, button_previous_state);
+	printk(KERN_INFO "IRQ! current=%u, prev=%u, total_presses=%u, numPresses=%u\n", button_current_state, button_previous_state, total_presses, numberPresses);
 
 	if (button_current_state == 1 && button_previous_state != button_current_state)
 	{
