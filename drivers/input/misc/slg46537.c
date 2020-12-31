@@ -284,6 +284,7 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 				dev_info(&dummy_slg->client->dev, "Sending end call event\n");
 			input_report_rel(dummy_slg->input_dev, EV_END_CALL, dummyvalue);
 			dummy_slg->incall = 0;
+			double_press = 0;
 		}
 	}
 
