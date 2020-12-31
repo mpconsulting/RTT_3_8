@@ -708,18 +708,17 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 	{
 		total_press++;
 		press_time = get_epoch_time();
-		cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
 	}
 	else if (button_current_state == 0 && button_previous_state != button_current_state)
 	{
 		total_press++;
 		release_time = get_epoch_time();
-		cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
 
 		total_time = release_time - press_time;
 
 		if (total_press == 2)
 		{
+			cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
 			schedule_delayed_work(&dummy_slg->call_keypress_work, msecs_to_jiffies(2000));
 		}
 	}
