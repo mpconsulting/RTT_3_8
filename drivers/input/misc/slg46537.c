@@ -253,13 +253,35 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 	if (total_press >= 4)
 	{
 		printk(KERN_INFO "call button pressed multiple times  \n");
+		if (dummy_slg->incall == 1)
+		{
+			printk(KERN_INFO "call is ongoing . please press single time to end call \n");
+		}
 	}
 	else
 	{
 		printk(KERN_INFO "call button pressed single time  \n");
+		if (dummy_slg->incall == 0)
+		{
+			printk(KERN_INFO "valid button is pressed. make call event should trigger \n");
+
+			if (log_enabled)
+				dev_info(&dummy_slg->client->dev, " Sending start call event\n");
+			input_report_rel(dummy_slg->input_dev, EV_MAKE_CALL, dummyvalue);
+			dummy_slg->incall = 1;
+		}
+		else if (dummy_slg->incall == 1)
+		{
+			printk(KERN_INFO "valid button is pressed. end call event should trigger as call is already started \n");
+
+			if (log_enabled)
+				dev_info(&dummy_slg->client->dev, "Sending end call event\n");
+			input_report_rel(dummy_slg->input_dev, EV_END_CALL, dummyvalue);
+			dummy_slg->incall = 0;
+		}
 	}
 
-//	cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
+	//	cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
 	total_press = 0;
 }
 
@@ -668,7 +690,7 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 
 	button_current_state = gpio_get_value(gpioButton);
 
-	printk(KERN_INFO "button event occured. total press is = %d \n",total_press);
+	printk(KERN_INFO "button event occured. total press is = %d \n", total_press);
 
 	if (button_current_state == 1 && button_previous_state != button_current_state)
 	{
