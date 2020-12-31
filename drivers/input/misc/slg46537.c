@@ -246,7 +246,7 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 	struct slg_data *slg = container_of(work,
 										struct slg_data,
 										call_keypress_work.work);
-	static double_press = 0;
+	static unsigned int double_press = 0;
 	//check if power button is still pressed
 	printk(KERN_INFO "2 sec timer for call button  \n");
 
