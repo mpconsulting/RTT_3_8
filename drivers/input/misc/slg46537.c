@@ -668,15 +668,16 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 
 	button_current_state = gpio_get_value(gpioButton);
 
-	total_press++;
 	printk(KERN_INFO "button event occured. total press is = %d \n",total_press);
 
 	if (button_current_state == 1 && button_previous_state != button_current_state)
 	{
+		total_press++;
 		press_time = get_epoch_time();
 	}
 	else if (button_current_state == 0 && button_previous_state != button_current_state)
 	{
+		total_press++;
 		release_time = get_epoch_time();
 
 		total_time = release_time - press_time;
