@@ -286,6 +286,8 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 			dummy_slg->incall = 0;
 			double_press = 0;
 		}
+		input_sync(dummy_slg->input_dev);
+
 	}
 
 	//	cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
@@ -736,7 +738,6 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 		// 	dummy_slg->incall = 0;
 		// }
 	}
-	input_sync(dummy_slg->input_dev);
 	button_previous_state = button_current_state;
 
 	numberPresses++;				   // Global counter, will be outputted when the module is unloaded
