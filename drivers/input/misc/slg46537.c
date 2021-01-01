@@ -252,7 +252,14 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 	printk(KERN_INFO "2 sec timer for call button  \n");
 	printk(KERN_INFO "total_press=%u\n", total_press);
 
-	if (total_press >= 4)  /* for multiple detection of call_button  */
+	if ((gpio_get_value(gpioButton)) && timer_set == 1)
+	{
+		//cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
+		total_press = 3;
+		return;
+	}
+
+	if (total_press >= 4) /* for multiple detection of call_button  */
 	{
 		printk(KERN_INFO "call button pressed multiple times  \n");
 		double_press = 1;
@@ -268,7 +275,7 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 			dummy_slg->incall = 1;
 		}
 	}
-	else   /* for single detection of call_button  */
+	else /* for single detection of call_button  */
 	{
 		printk(KERN_INFO "call button pressed single time  \n");
 		if (dummy_slg->incall == 0 && double_press == 0)
@@ -291,10 +298,9 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 			double_press = 0;
 		}
 		input_sync(dummy_slg->input_dev);
-
 	}
 	timer_set = 0;
-//	cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
+	//	cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
 	total_press = 0;
 }
 
@@ -716,18 +722,18 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 
 		total_time = release_time - press_time;
 
-		if (total_press == 2)
+		if ((total_press%2) == 0)
 		{
 			cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
 			schedule_delayed_work(&dummy_slg->call_keypress_work, msecs_to_jiffies(2000));
 			timer_set = 1;
 		}
-		else if(timer_set != 1)
-		{
-			total_press = 0;
-		}
+		// else if (timer_set != 1)
+		// {
+		// 	total_press = 0;
+		// }
 	}
-	
+
 	button_previous_state = button_current_state;
 
 	numberPresses++;				   // Global counter, will be outputted when the module is unloaded
