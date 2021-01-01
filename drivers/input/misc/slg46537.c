@@ -52,7 +52,7 @@
 #define SLG_END_CALL_STATE 0x20
 
 static unsigned int total_press = 0;
-
+static int timer_set = 0;
 static int log_enabled = 0;
 struct slg_data
 {
@@ -293,8 +293,8 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 		input_sync(dummy_slg->input_dev);
 
 	}
-
-	//	cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
+	timer_set = 0;
+//	cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
 	total_press = 0;
 }
 
@@ -720,8 +720,14 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 		{
 			cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
 			schedule_delayed_work(&dummy_slg->call_keypress_work, msecs_to_jiffies(2000));
+			timer_set = 1;
+		}
+		else if(timer_set != 1)
+		{
+			total_press = 0;
 		}
 	}
+	
 	button_previous_state = button_current_state;
 
 	numberPresses++;				   // Global counter, will be outputted when the module is unloaded
