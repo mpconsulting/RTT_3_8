@@ -266,7 +266,7 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 	static unsigned int double_press = 0;
 	//check if power button is still pressed
 	printk(KERN_INFO "2 sec timer for call button  \n");
-	printk(KERN_INFO "total_press=%u\n", total_press);
+	// printk(KERN_INFO "total_press=%u\n", total_press);
 
 	if ((gpio_get_value(gpioButton)) && timer_set == 1)
 	{
@@ -316,7 +316,6 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 		input_sync(dummy_slg->input_dev);
 	}
 	timer_set = 0;
-	//	cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
 	total_press = 0;
 }
 
@@ -712,7 +711,7 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 	int dummyvalue = 2;
 
 	button_current_state = gpio_get_value(gpioButton);
-	printk(KERN_INFO "IRQ! current=%u, prev=%u, total_presses=%u, numPresses=%u\n", button_current_state, button_previous_state, total_press, numberPresses);
+	// printk(KERN_INFO "IRQ! current=%u, prev=%u, total_presses=%u, numPresses=%u\n", button_current_state, button_previous_state, total_press, numberPresses);
 
 	if (button_current_state == 1 && button_previous_state != button_current_state)
 	{
@@ -732,10 +731,6 @@ static irq_handler_t ebbgpio_irq_handler(unsigned int irq, void *dev_id, struct 
 			schedule_delayed_work(&dummy_slg->call_keypress_work, msecs_to_jiffies(2000));
 			timer_set = 1;
 		}
-		// else if (timer_set != 1)
-		// {
-		// 	total_press = 0;
-		// }
 	}
 
 	button_previous_state = button_current_state;
