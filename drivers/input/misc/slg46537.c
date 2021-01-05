@@ -554,6 +554,8 @@ static int slg_probe(struct i2c_client *client,
 	__set_bit(REL_RY, slg->input_dev->relbit);
 	__set_bit(REL_RZ, slg->input_dev->relbit);
 	__set_bit(REL_HWHEEL, slg->input_dev->relbit);
+	__set_bit(REL_DIAL, slg->input_dev->relbit);
+	
 	slg->input_dev->name = "slg46537";
 	slg->input_dev->phys = "slg46537/input0";
 
