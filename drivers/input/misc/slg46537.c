@@ -270,7 +270,6 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 
 	if ((gpio_get_value(gpioButton)) && timer_set == 1)
 	{
-		//cancel_delayed_work_sync(&dummy_slg->call_keypress_work);
 		total_press = 3;
 		return;
 	}
@@ -286,10 +285,11 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 		}
 		else
 		{
+			if (log_enabled)
+				dev_info(&dummy_slg->client->dev, " Sending EV_MAKE_CALL_2 event\n");
 			printk(KERN_INFO "valid double press detected. double press event should trigger \n");
 			input_report_rel(dummy_slg->input_dev, EV_MAKE_CALL_2, dummyvalue);
 			dummy_slg->incall = 1;
-			input_sync(dummy_slg->input_dev);
 		}
 	}
 	else /* for single detection of call_button  */
@@ -300,7 +300,7 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 			printk(KERN_INFO "valid button is pressed. make call event should trigger \n");
 
 			if (log_enabled)
-				dev_info(&dummy_slg->client->dev, " Sending start call event\n");
+				dev_info(&dummy_slg->client->dev, " Sending EV_MAKE_CALL event\n");
 			input_report_rel(dummy_slg->input_dev, EV_MAKE_CALL, dummyvalue);
 			dummy_slg->incall = 1;
 		}
@@ -309,13 +309,14 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 			printk(KERN_INFO "valid button is pressed. end call event should trigger as call is already started \n");
 
 			if (log_enabled)
-				dev_info(&dummy_slg->client->dev, "Sending end call event\n");
+				dev_info(&dummy_slg->client->dev, "Sending EV_END_CALL event\n");
 			input_report_rel(dummy_slg->input_dev, EV_END_CALL, dummyvalue);
 			dummy_slg->incall = 0;
 			double_press = 0;
 		}
-		input_sync(dummy_slg->input_dev);
+		
 	}
+	input_sync(dummy_slg->input_dev);
 	timer_set = 0;
 	total_press = 0;
 }
