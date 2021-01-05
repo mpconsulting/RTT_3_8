@@ -289,6 +289,7 @@ static void slg_delayed_call_keypress_work(struct work_struct *work)
 			printk(KERN_INFO "valid double press detected. double press event should trigger \n");
 			input_report_rel(dummy_slg->input_dev, EV_MAKE_CALL_2, dummyvalue);
 			dummy_slg->incall = 1;
+			input_sync(dummy_slg->input_dev);
 		}
 	}
 	else /* for single detection of call_button  */
