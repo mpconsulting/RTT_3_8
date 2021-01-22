@@ -459,8 +459,9 @@ static ssize_t pmic_register_dump(struct device *dev,
 	struct pmic_data *pmic = i2c_get_clientdata(client);
 	int error;
 	uint8_t val;
+	uint8_t addr;
 
-	for(uint8_t addr=0x00; addr<=0xFF; ++addr)
+	for(addr=0x00; addr<=0xFF; ++addr)
 	{
 		if(addr % 0x0F == 0)
 		{
