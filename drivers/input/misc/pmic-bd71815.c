@@ -452,6 +452,29 @@ static ssize_t pmic_get_battery_level(struct device *dev,
 	return sprintf(buf, "%d\n", batt_level);
 }
 
+static ssize_t pmic_register_dump(struct device *dev,
+                        struct device_attribute *attr, char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct pmic_data *pmic = i2c_get_clientdata(client);
+	int error;
+	uint8_t val;
+
+	for(uint8_t addr=0x00; addr<=0xFF; ++addr)
+	{
+		if(addr % 0x0F == 0)
+		{
+			dev_info(dev, "\n0x%02X\t", addr);
+		}
+		error = pmic_i2c_read(pmic, addr, &val, 1);
+		if (error != 2)
+			dev_err(dev, "Error reading 0x%02x = 0x%d, err = %d", addr, val, error);
+		dev_info(dev, "0x%02X ", val);
+	}
+
+	dev_info(dev, "\nDone\n");
+	return sprintf(buf, "%d\n", 0);
+}
 
 static DEVICE_ATTR(wlan_enable, S_IRUGO|S_IWUSR, NULL, pmic_set_wlan_enable);
 static DEVICE_ATTR(test, S_IRUGO|S_IWUSR, NULL, pmic_set_test);
@@ -462,6 +485,7 @@ static DEVICE_ATTR(gpiotest, S_IRUGO|S_IWUSR, NULL, pmic_set_gpiotest);
 static DEVICE_ATTR(dsp_enable, S_IRUGO|S_IWUSR, NULL, pmic_set_dsp_enable);
 static DEVICE_ATTR(cellbatt_enable, S_IRUGO|S_IWUSR, NULL, pmic_set_cellbatt_enable);
 static DEVICE_ATTR(battery_level, S_IRUGO|S_IWUSR, pmic_get_battery_level, NULL);
+static DEVICE_ATTR(register_dump, S_IRUGO|S_IWUSR, pmic_register_dump, NULL);
 
 
 static struct attribute *pmic_attributes[] = {
@@ -474,6 +498,7 @@ static struct attribute *pmic_attributes[] = {
 	&dev_attr_dsp_enable.attr,
 	&dev_attr_cellbatt_enable.attr,
 	&dev_attr_battery_level.attr,
+	&dev_attr_register_dump.attr,
 	NULL
 };
 
