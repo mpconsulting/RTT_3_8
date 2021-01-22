@@ -485,7 +485,7 @@ static DEVICE_ATTR(gpiotest, S_IRUGO|S_IWUSR, NULL, pmic_set_gpiotest);
 static DEVICE_ATTR(dsp_enable, S_IRUGO|S_IWUSR, NULL, pmic_set_dsp_enable);
 static DEVICE_ATTR(cellbatt_enable, S_IRUGO|S_IWUSR, NULL, pmic_set_cellbatt_enable);
 static DEVICE_ATTR(battery_level, S_IRUGO|S_IWUSR, pmic_get_battery_level, NULL);
-static DEVICE_ATTR(register_dump, S_IRUGO|S_IWUSR, pmic_register_dump, NULL);intentional typo
+static DEVICE_ATTR(register_dump, S_IRUGO|S_IWUSR, pmic_register_dump, NULL);
 
 
 static struct attribute *pmic_attributes[] = {
