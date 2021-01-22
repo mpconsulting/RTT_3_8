@@ -463,7 +463,7 @@ static ssize_t pmic_register_dump(struct device *dev,
 
 	for(addr=0x00; addr<0xFF; ++addr)
 	{
-		if(addr % 0x0F == 0)
+		if(addr % 0x10 == 0)
 		{
 			printk(KERN_ALERT "\nAddr 0x%02X\t", addr);
 		}
