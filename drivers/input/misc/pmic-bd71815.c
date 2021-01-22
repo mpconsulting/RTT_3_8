@@ -470,7 +470,7 @@ static ssize_t pmic_register_dump(struct device *dev,
 		error = pmic_i2c_read(pmic, addr, &val, 1);
 		if (error != 2)
 			dev_err(dev, "Error reading 0x%02x = 0x%d, err = %d", addr, val, error);
-		rintk(KERN_CONT "0x%02X ", val);
+		printk(KERN_CONT "0x%02X ", val);
 	}
 
 	dev_info(dev, "\nDone\n");
