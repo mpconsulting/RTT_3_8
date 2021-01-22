@@ -465,12 +465,12 @@ static ssize_t pmic_register_dump(struct device *dev,
 	{
 		if(addr % 0x0F == 0)
 		{
-			dev_info(dev, "\n0x%02X\t", addr);
+			printk(KERN_ALERT "\nAddr 0x%02X\t", addr);
 		}
 		error = pmic_i2c_read(pmic, addr, &val, 1);
 		if (error != 2)
 			dev_err(dev, "Error reading 0x%02x = 0x%d, err = %d", addr, val, error);
-		dev_info(dev, "0x%02X ", val);
+		rintk(KERN_CONT "0x%02X ", val);
 	}
 
 	dev_info(dev, "\nDone\n");
